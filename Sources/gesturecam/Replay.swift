@@ -40,7 +40,7 @@ enum Replay {
         if fires.isEmpty { print("  none") }
         for f in fires {
             var mark = ""
-            if let l = f.label { mark = l == f.gesture.rawValue ? "  ✓" : "  ✗ (label \(l))" }
+            if let l = f.label { mark = l == f.gesture.rawValue ? "  ✓" : (l == "none" ? "  ✗ (nothing expected)" : "  ✗ (label \(l))") }
             let new = recordedSet.contains("\(f.t)") ? "" : "  [new vs. recording]"
             print(String(format: "  %7.3f  %@%@%@", f.t, f.gesture.rawValue, mark, new))
         }
@@ -51,6 +51,11 @@ enum Replay {
         }
 
         if let label = header?.label ?? frames.first?.label {
+            if label == "none" {
+                print("")
+                print("label none: \(fires.count) fires (expected 0)")
+                return fires.isEmpty ? 0 : 1
+            }
             let correct = fires.filter { $0.gesture.rawValue == label }.count
             let wrong = fires.count - correct
             print("")

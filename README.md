@@ -65,7 +65,7 @@ or use "Start Recording" in the menu, which writes to `~/.config/gesturecam/reco
 `replay <file>` runs the recorded landmarks through the current classifier and config and lists
 every fire. It marks fires that differ from what happened at record time, so you can change a
 threshold and see exactly which misfires disappear or appear. With `--label <gesture>` set at record
-time, replay also reports correct vs. wrong fires and exits non-zero if any are wrong, which makes a
+time (`none` for "nothing should fire"), replay also reports correct vs. wrong fires and exits non-zero if any are wrong, which makes a
 labeled recording usable as a regression test. `-v` prints every frame's finger flags, hold progress,
 and speed. `--config` replays against a different config file without touching the live one.
 
