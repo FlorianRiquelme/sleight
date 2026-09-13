@@ -11,7 +11,7 @@ On-device only (Apple Vision), no frames stored or sent anywhere.
 | ✋ open palm | Spotify play/pause |
 | ✊ fist | media mute |
 | ✌️ two fingers | Spotify next track |
-| 👍 thumbs up | shell: notification (placeholder, edit it) |
+| 👍 thumbs up | media volume up (one step per hold) |
 | 👈 swipe left | `ctrl+right` → space to the right |
 | 👉 swipe right | `ctrl+left` → space to the left |
 
@@ -96,11 +96,16 @@ and speed. `--config` replays against a different config file without touching t
   "minOpenExtent": 0.28,
   "mappings": {
     "openPalm":   { "type": "spotify", "command": "playpause" },
-    "fist":       { "type": "key",   "keys": "cmd+shift+m" },
-    "twoFingers": { "type": "shell", "command": "open -a Notes" }
+    "fist":       { "type": "media",   "key": "mute" },
+    "twoFingers": { "type": "spotify", "command": "next" },
+    "thumbsUp":   { "type": "media",   "key": "volumeup" },
+    "swipeLeft":  { "type": "key",     "keys": "ctrl+right" },
+    "swipeRight": { "type": "key",     "keys": "ctrl+left" }
   }
 }
 ```
+
+Other examples: `{ "type": "key", "keys": "cmd+shift+m" }`, `{ "type": "shell", "command": "open -a Notes" }`.
 
 Action types:
 - `spotify` — `playpause`, `play`, `pause`, `next`, `previous` (talks to Spotify directly via Apple Events)

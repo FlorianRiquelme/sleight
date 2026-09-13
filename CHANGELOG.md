@@ -31,6 +31,7 @@ first within a section.
   longer part of the open palm rule.
 
 ### Changed
+- Thumbs up defaults to media volume up instead of a placeholder shell notification.
 - Cooldown uses frame timestamps instead of wall clock so replays are deterministic.
 - The menu bar app now stays running and shows the problem when the camera is missing, denied, or
   errors, instead of exiting (headless `--no-ui` still exits non-zero).
