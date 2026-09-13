@@ -43,6 +43,7 @@ swift build
 .build/debug/sleight replay out.jsonl [-v] [--config other.json]   # re-run a recording offline
 ./scripts/bundle.sh                     # build/sleight.app
 ./scripts/start.sh                      # rebuild the .app and relaunch it; --dev runs a debug build in the foreground
+uv run scripts/tree-experiment.py       # would a learned classifier beat the rules on the fixtures? (needs uv)
 swift test                              # swipe detector tests
 ```
 

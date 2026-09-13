@@ -118,3 +118,19 @@ so fist and thumbs up now need `minClosedExtent` 0.16. Both are config knobs and
 both floors on `TOO SMALL`.
 **Revisit if:** a user gestures from farther back than arm's length, or the fixtures are
 re-recorded at another distance; the margins are ~10% on both floors.
+
+## 2026-09-13 A decision tree on the fixtures did not beat the rules; a personal model stays the long-term aim
+`scripts/tree-experiment.py` fits shallow trees on every still frame of the fixtures. On the 16
+hand-designed features it rediscovers the same splits (a distance gate, curl on the closed
+fingers, an extent cutoff for the fist), needs depth 6 to match the rules, and still drops a
+quarter of the thumbs-up frames. On the 42 raw landmarks a depth-3 tree misreads 31 idle frames
+against the rules' 58 with near-perfect recall, but it splits on the little-finger knuckle's x
+and the thumb tip's height relative to the wrist: the orientation of one user's left hand at one
+distance, which is all the positive fixtures contain. Two things it did suggest: palm size
+(wrist to middle knuckle) is a finger-independent distance measure that could replace the two
+extent floors, and the raw-landmark tree is worth re-running once fixtures vary.
+The owner wants a small model trained on their own recordings eventually. The blocker is data
+variety, not model capacity.
+**Revisit when:** `recordings/` holds right-hand and second-distance fixtures for every gesture
+(tracked in the issue backlog). If the raw-landmark tree still generalizes there, ship a personal
+model behind the same `Pipeline` interface and keep the rules as the fallback and the explainer.
