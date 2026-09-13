@@ -1,6 +1,7 @@
 #!/bin/zsh
-# Records the fixtures issue #2 asks for: every static gesture with the right hand and with the
-# left hand one step back, plus right-hand swipes. One timed take per file, so you never have to
+# Records the second-distance fixtures for issue #2: every gesture with the left hand one step
+# back from the camera. (Right-hand takes were dropped: the laptop-arm camera barely sees that
+# hand, and the none fixtures already cover it.) One timed take per file, so you never have to
 # touch the keyboard mid-gesture. Takes whose file already exists are skipped; delete a bad take
 # and re-run to redo just that one. Actions are dry-run, so nothing fires while you record.
 set -uo pipefail
@@ -20,18 +21,12 @@ take() { # <file stem> <label> <seconds> <instruction>
   echo "      saved $(($(wc -l < "$file") - 1)) frames"
 }
 
-echo "Usual seat, arm's length. RIGHT hand. Hold each gesture ~2s, drop the hand, repeat until told."
-take openPalm-right   openPalm   $HOLD "RIGHT hand, arm's length: open palm, fingers spread"
-take fist-right       fist       $HOLD "RIGHT hand, arm's length: fist"
-take twoFingers-right twoFingers $HOLD "RIGHT hand, arm's length: index + middle up, others folded"
-take thumbsUp-right   thumbsUp   $HOLD "RIGHT hand, arm's length: thumbs up"
-take swipeLeft-right  swipeLeft  $SWIPE "RIGHT hand, open: swipe toward YOUR LEFT, 3–4 times, return slowly"
-take swipeRight-right swipeRight $SWIPE "RIGHT hand, open: swipe toward YOUR RIGHT, 3–4 times, return slowly"
-
-echo; echo "Now move ONE STEP BACK from the camera. LEFT hand, same gestures."
-take openPalm-far     openPalm   $HOLD "LEFT hand, one step back: open palm"
+echo "Usual seat, then ONE STEP BACK from the camera. LEFT hand. Hold each gesture ~2s, drop the hand, repeat until told."
+take openPalm-far     openPalm   $HOLD "LEFT hand, one step back: open palm, fingers spread"
 take fist-far         fist       $HOLD "LEFT hand, one step back: fist"
-take twoFingers-far   twoFingers $HOLD "LEFT hand, one step back: two fingers"
+take twoFingers-far   twoFingers $HOLD "LEFT hand, one step back: index + middle up, others folded"
 take thumbsUp-far     thumbsUp   $HOLD "LEFT hand, one step back: thumbs up"
+take swipeLeft-far    swipeLeft  $SWIPE "LEFT hand, open, one step back: swipe toward YOUR LEFT, 3–4 times, return slowly"
+take swipeRight-far   swipeRight $SWIPE "LEFT hand, open, one step back: swipe toward YOUR RIGHT, 3–4 times, return slowly"
 
 echo; echo "All takes done. Next: scripts/replay-all.sh"
