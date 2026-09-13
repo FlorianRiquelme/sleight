@@ -11,6 +11,7 @@ func flagValue(_ name: String) -> String? {
 let verbose = args.contains("-v")
 let noUI = args.contains("--no-ui")
 let dryRun = args.contains("--dry-run")
+let debugAtLaunch = args.contains("--debug")
 
 func log(_ s: String) {
     let t = DateFormatter(); t.dateFormat = "HH:mm:ss.SSS"
@@ -85,6 +86,7 @@ AVCaptureDevice.requestAccess(for: .video) { granted in
         do {
             try engine.start(device: device)
             log("camera: \(device.localizedName)  config: \(Config.path.path)")
+            if debugAtLaunch { statusBar?.showDebug() }
         } catch {
             log("camera error: \(error)"); exit(1)
         }

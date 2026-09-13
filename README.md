@@ -32,6 +32,7 @@ swift build
 .build/debug/gesturecam                 # menu bar app
 .build/debug/gesturecam --no-ui -v      # headless, verbose logging for tuning
 .build/debug/gesturecam --dry-run       # detect but don't fire actions
+.build/debug/gesturecam --debug         # open the debug window at launch
 .build/debug/gesturecam --list          # cameras
 .build/debug/gesturecam --camera iphone # pick camera by name substring
 .build/debug/gesturecam --fire fist     # run one mapping once (test actions)
@@ -40,6 +41,17 @@ swift test                              # swipe detector tests
 ```
 
 Needs Camera permission, and Accessibility permission to post key events.
+
+## Debug window
+
+"Debug Window" in the menu (or `--debug`) shows the mirrored camera feed with:
+
+- hand skeleton, green = finger counted as extended, red = curled, yellow = hand moving so static poses are gated
+- blue dot = palm center, cyan trail = the swipe detector's sample window
+- HUD: current pose and per-finger flags including the three thumb tests, hold progress toward `holdFrames`,
+  palm speed vs `stillSpeed` with a swipe distance meter, fps, and the last fired gesture
+
+Frame conversion for the preview only runs while the window is open.
 
 ## Config
 

@@ -31,4 +31,6 @@ struct SwipeDetector {
     }
 
     mutating func reset() { samples.removeAll() }
+
+    var trail: [CGPoint] { samples.map(\.p) }
 }

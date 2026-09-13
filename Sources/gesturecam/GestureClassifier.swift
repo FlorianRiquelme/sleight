@@ -6,10 +6,21 @@ enum Gesture: String, CaseIterable {
     case swipeLeft, swipeRight   // dynamic, produced by SwipeDetector
 }
 
+/// Everything the classifier derived from one hand, for the debug view.
+struct HandFeatures {
+    var index, middle, ring, little: Bool
+    var thumbStraight, thumbClear, thumbUp: Bool
+    var thumb: Bool { thumbStraight && thumbClear }
+    var extendedCount: Int { [index, middle, ring, little].filter { $0 }.count }
+    var gesture: Gesture?
+}
+
 /// Rule-based static pose classifier on Vision hand landmarks.
 /// All distances are normalized by hand size (wrist → middle MCP) for scale invariance.
 struct GestureClassifier {
-    func classify(_ hand: Hand) -> Gesture? {
+    func classify(_ hand: Hand) -> Gesture? { features(hand)?.gesture }
+
+    func features(_ hand: Hand) -> HandFeatures? {
         guard let wrist = hand[.wrist], let midMCP = hand[.middleMCP] else { return nil }
         let size = dist(wrist, midMCP)
         guard size > 0.01 else { return nil }
@@ -30,16 +41,15 @@ struct GestureClassifier {
         // Thumb: extended when straight and clear of the index knuckle (a tucked thumb sits on it).
         let thumbStraight = dist(thumbTip, wrist) > dist(thumbIP, wrist) * 1.1
         let thumbClear = dist(thumbTip, indexMCP) / size > 0.6
-        let thumb = thumbStraight && thumbClear
-
-        let fingers = [index, middle, ring, little]
-        let extendedCount = fingers.filter { $0 }.count
-
-        if extendedCount == 4 && thumb { return .openPalm }
-        if extendedCount == 0 && !thumb { return .fist }
-        if index && middle && !ring && !little { return .twoFingers }
-        if extendedCount == 0 && thumb && thumbTip.y > indexMCP.y + 0.3 * size { return .thumbsUp }
-        return nil
+        var f = HandFeatures(index: index, middle: middle, ring: ring, little: little,
+                             thumbStraight: thumbStraight, thumbClear: thumbClear,
+                             thumbUp: thumbTip.y > indexMCP.y + 0.3 * size)
+        let n = f.extendedCount
+        if n == 4 && f.thumb { f.gesture = .openPalm }
+        else if n == 0 && !f.thumb { f.gesture = .fist }
+        else if index && middle && !ring && !little { f.gesture = .twoFingers }
+        else if n == 0 && f.thumb && f.thumbUp { f.gesture = .thumbsUp }
+        return f
     }
 
     private func dist(_ a: CGPoint, _ b: CGPoint) -> CGFloat {
@@ -50,8 +60,8 @@ struct GestureClassifier {
 /// Emits a gesture only after it has been seen for `holdFrames` consecutive frames.
 struct GestureStabilizer {
     let holdFrames: Int
-    private var candidate: Gesture?
-    private var count = 0
+    private(set) var candidate: Gesture?
+    private(set) var count = 0
     private(set) var current: Gesture?
 
     init(holdFrames: Int = 6) { self.holdFrames = holdFrames }

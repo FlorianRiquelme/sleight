@@ -10,6 +10,7 @@ final class StatusBarController: NSObject {
     private let enabledItem = NSMenuItem(title: "Enabled", action: #selector(toggleEnabled), keyEquivalent: "")
     private let cameraMenu = NSMenu()
     private var flashReset: DispatchWorkItem?
+    private lazy var debug = DebugWindowController(engine: engine)
 
     private static let emoji: [Gesture: String] = [.openPalm: "✋", .fist: "✊", .twoFingers: "✌️", .thumbsUp: "👍", .swipeLeft: "👈", .swipeRight: "👉"]
 
@@ -34,6 +35,7 @@ final class StatusBarController: NSObject {
         rebuildCameraMenu()
         menu.addItem(camItem)
         menu.addItem(.separator())
+        menu.addItem(withTitle: "Debug Window", action: #selector(showDebug), keyEquivalent: "d").target = self
         menu.addItem(withTitle: "Edit Config…", action: #selector(editConfig), keyEquivalent: ",").target = self
         menu.addItem(withTitle: "Reload Config", action: #selector(reloadConfig), keyEquivalent: "r").target = self
         menu.addItem(.separator())
@@ -96,6 +98,8 @@ final class StatusBarController: NSObject {
         engine.apply(cfg)
         if engine.isRunning { try? engine.start(device: d) }
     }
+
+    @objc func showDebug() { debug.show() }
 
     @objc private func editConfig() {
         if !FileManager.default.fileExists(atPath: Config.path.path) { try? Config.default.save() }

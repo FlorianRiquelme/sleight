@@ -1,6 +1,24 @@
 import AVFoundation
 import Foundation
 import QuartzCore
+import VideoToolbox
+
+/// Snapshot of one processed frame for the debug window.
+struct DebugFrame {
+    let image: CGImage?
+    let hand: Hand?
+    let features: HandFeatures?
+    let gated: Bool               // static classification suppressed because the hand is moving
+    let speed: CGFloat            // palm speed, frame widths per second
+    let trail: [CGPoint]          // recent palm centers (oldest first)
+    let swipeMinDistance: CGFloat
+    let stillSpeed: CGFloat
+    let candidate: Gesture?
+    let holdCount: Int
+    let holdFrames: Int
+    let fps: Int
+    let lastFired: (gesture: Gesture, at: Date)?
+}
 
 /// Camera → hand pose → classifier → stabilizer → cooldown → onGesture.
 final class Engine {
@@ -19,6 +37,9 @@ final class Engine {
     var onHand: ((Bool) -> Void)?
     var onFPS: ((Int) -> Void)?
     var onRaw: ((Hand, Gesture?) -> Void)?
+    var onDebug: ((DebugFrame) -> Void)?
+    private var lastFPS = 0
+    private var lastFired: (gesture: Gesture, at: Date)?
 
     var isRunning: Bool { camera?.session.isRunning ?? false }
 
@@ -61,6 +82,7 @@ final class Engine {
         let now = Date()
         guard now.timeIntervalSince(lastFire) >= config.cooldownSeconds else { return }
         lastFire = now
+        lastFired = (g, now)
         onGesture?(g)
     }
 
@@ -76,24 +98,45 @@ final class Engine {
         // Dynamic: swipes on palm motion.
         let t = CACurrentMediaTime()
         var moving = false
+        var swiped = false
+        var speed: CGFloat = 0
         if let center = hand?.palmCenter {
             if let s = swipe.push(center, at: t) {
                 _ = stabilizer.push(nil)
                 fire(s)
-                return
+                swiped = true
+            } else {
+                speed = swipe.recentSpeed(at: t)
+                moving = speed > CGFloat(config.stillSpeed)
             }
-            moving = swipe.recentSpeed(at: t) > CGFloat(config.stillSpeed)
         }
 
         // Static: only while the hand is still, so a moving open palm doesn't also fire.
-        let raw = moving ? nil : hand.flatMap(classifier.classify)
-        if let h = hand { onRaw?(h, raw) }
-        if let g = stabilizer.push(raw) { fire(g) }
+        let features = (moving || swiped) ? nil : hand.flatMap(classifier.features)
+        let raw = features?.gesture
+        if !swiped {
+            if let h = hand { onRaw?(h, raw) }
+            if let g = stabilizer.push(raw) { fire(g) }
+        }
+
+        if let onDebug {
+            var cg: CGImage?
+            if let pb = CMSampleBufferGetImageBuffer(buf) {
+                VTCreateCGImageFromCVPixelBuffer(pb, options: nil, imageOut: &cg)
+            }
+            onDebug(DebugFrame(
+                image: cg, hand: hand, features: features, gated: moving || swiped, speed: speed,
+                trail: swipe.trail, swipeMinDistance: CGFloat(config.swipeMinDistance),
+                stillSpeed: CGFloat(config.stillSpeed),
+                candidate: stabilizer.candidate, holdCount: stabilizer.count, holdFrames: stabilizer.holdFrames,
+                fps: lastFPS, lastFired: lastFired))
+        }
 
         let now = Date()
         let elapsed = now.timeIntervalSince(lastReport)
         if elapsed >= 5 {
-            onFPS?(Int(Double(frames) / elapsed))
+            lastFPS = Int(Double(frames) / elapsed)
+            onFPS?(lastFPS)
             frames = 0; lastReport = now
         }
     }
