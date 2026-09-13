@@ -189,7 +189,7 @@ event with its own suppression window and return lockout in `SwipeDetector`. `Pi
 checks a swipe against the last swipe only; static gestures still cool down after any fire. Both
 takes replay with every swipe back and the idle fixture gains no swipe.
 The other two options in #3 were measured and not taken. Normalizing `stillSpeed` by palm length:
-the far drift stays under 3 palm lengths/s for 23 consecutive frames (hold is 15) while deliberate
+the far drift stays under 3 palm lengths/s for 20 consecutive frames (hold is 15) while deliberate
 holds at arm's length reach 4–5, so the unit does not separate the two. Raising `holdFrames`: the
 swipeLeft take is genuinely still (≤ 0.05 frame widths/s) for 33 frames, which no hold under
 1.1 s covers, and an open hand held still that long is an open palm by definition
