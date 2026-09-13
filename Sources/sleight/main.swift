@@ -52,9 +52,13 @@ if let name = flagValue("--fire") {
 }
 
 let wanted = flagValue("--camera") ?? config.camera
-guard let device = wanted.flatMap({ n in devices.first { $0.localizedName.localizedCaseInsensitiveContains(n) } }) ?? devices.first else {
-    FileHandle.standardError.write("no camera found\n".data(using: .utf8)!)
-    exit(1)
+let device = wanted.flatMap({ n in devices.first { $0.localizedName.localizedCaseInsensitiveContains(n) } }) ?? devices.first
+if device == nil {
+    if noUI {
+        FileHandle.standardError.write("no camera found\n".data(using: .utf8)!)
+        exit(1)
+    }
+    log("no camera found")
 }
 
 // MARK: - Wiring
@@ -88,31 +92,41 @@ if !noUI {
     engine.onGesture = fireGesture
 }
 
+let uiCameraError = engine.onCameraError
+engine.onCameraError = { msg in uiCameraError?(msg); log("camera error: \(msg)") }
+
 if !dryRun && !ActionRunner.ensureAccessibility() {
     log("Accessibility permission missing: grant it in System Settings → Privacy & Security → Accessibility, or actions will be swallowed.")
 }
 
-AVCaptureDevice.requestAccess(for: .video) { granted in
-    DispatchQueue.main.async {
-        guard granted else { log("camera permission denied"); exit(1) }
-        do {
-            try engine.start(device: device)
-            log("camera: \(device.localizedName)  config: \(Config.path.path)")
-            if let recordPath {
-                let url = URL(fileURLWithPath: recordPath)
-                engine.recorder = try Recorder(url: url, camera: device.localizedName, label: recordLabel,
-                                               config: config, start: CACurrentMediaTime())
-                log("recording to \(url.path)\(recordLabel.map { "  label=\($0)" } ?? "")")
-                signal(SIGINT) { _ in
-                    engine.recorder?.close()
-                    log("recording closed (\(engine.recorder?.frameCount ?? 0) frames)")
-                    exit(0)
-                }
-                signal(SIGTERM) { _ in engine.recorder?.close(); exit(0) }
+if let device {
+    AVCaptureDevice.requestAccess(for: .video) { granted in
+        DispatchQueue.main.async {
+            guard granted else {
+                if noUI { log("camera permission denied"); exit(1) }
+                statusBar?.reportCameraProblem("Camera permission denied", permissionDenied: true)
+                return
             }
-            if debugAtLaunch { statusBar?.showDebug() }
-        } catch {
-            log("camera error: \(error)"); exit(1)
+            do {
+                try engine.start(device: device)
+                log("camera: \(device.localizedName)  config: \(Config.path.path)")
+                if let recordPath {
+                    let url = URL(fileURLWithPath: recordPath)
+                    engine.recorder = try Recorder(url: url, camera: device.localizedName, label: recordLabel,
+                                                   config: config, start: CACurrentMediaTime())
+                    log("recording to \(url.path)\(recordLabel.map { "  label=\($0)" } ?? "")")
+                    signal(SIGINT) { _ in
+                        engine.recorder?.close()
+                        log("recording closed (\(engine.recorder?.frameCount ?? 0) frames)")
+                        exit(0)
+                    }
+                    signal(SIGTERM) { _ in engine.recorder?.close(); exit(0) }
+                }
+                if debugAtLaunch { statusBar?.showDebug() }
+            } catch {
+                if noUI { log("camera error: \(error)"); exit(1) }
+                statusBar?.reportCameraProblem("Camera error: \(error.localizedDescription)")
+            }
         }
     }
 }

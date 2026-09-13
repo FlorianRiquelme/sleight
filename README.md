@@ -47,6 +47,15 @@ swift test                              # swipe detector tests
 
 Needs Camera permission, and Accessibility permission to post key events.
 
+The menu bar icon reflects state: an outline hand means running with no hand in frame, a filled
+hand means a hand is visible, a slashed hand means paused (Enabled unchecked), and a slashed video
+camera means a camera problem (none found, permission denied, or a start/runtime error) — the menu
+explains which and offers an "Open … Settings…" shortcut. The app keeps running through camera
+problems instead of exiting; only `--no-ui` exits non-zero on them.
+
+"Launch at Login" in the menu needs `build/sleight.app` (`./scripts/bundle.sh`); running from
+`.build/debug/sleight` directly disables the toggle.
+
 ## Debug window
 
 "Debug Window" in the menu (or `--debug`) shows the mirrored camera feed with:

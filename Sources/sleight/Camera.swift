@@ -6,6 +6,7 @@ final class Camera: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate {
     let device: AVCaptureDevice
     private let queue = DispatchQueue(label: "sleight.camera")
     var onFrame: ((CMSampleBuffer) -> Void)?
+    var onError: ((String) -> Void)?
 
     static func devices() -> [AVCaptureDevice] {
         AVCaptureDevice.DiscoverySession(
@@ -33,13 +34,24 @@ final class Camera: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate {
         guard session.canAddOutput(output) else { throw CameraError.cannotAddOutput }
         session.addOutput(output)
         session.commitConfiguration()
+
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(handleRuntimeError(_:)),
+            name: .AVCaptureSessionRuntimeError, object: session)
     }
+
+    deinit { NotificationCenter.default.removeObserver(self) }
 
     func start() { session.startRunning() }
     func stop() { session.stopRunning() }
 
     func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
         onFrame?(sampleBuffer)
+    }
+
+    @objc private func handleRuntimeError(_ note: Notification) {
+        guard let error = note.userInfo?[AVCaptureSessionErrorKey] as? Error else { return }
+        onError?(error.localizedDescription)
     }
 
     enum CameraError: Error { case cannotAddInput, cannotAddOutput }

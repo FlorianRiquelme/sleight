@@ -38,6 +38,7 @@ final class Engine {
     var onFPS: ((Int) -> Void)?
     var onRaw: ((Hand, Gesture?) -> Void)?
     var onDebug: ((DebugFrame) -> Void)?
+    var onCameraError: ((String) -> Void)?
     var recorder: Recorder?
 
     var isRunning: Bool { camera?.session.isRunning ?? false }
@@ -50,6 +51,7 @@ final class Engine {
         stop()
         let cam = try Camera(device: device)
         cam.onFrame = { [weak self] in self?.handle($0) }
+        cam.onError = { [weak self] in self?.onCameraError?($0) }
         camera = cam
         cam.start()
     }

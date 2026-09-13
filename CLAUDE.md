@@ -57,6 +57,7 @@ the result.
   commit.
 - A gesture misfires or misses? Follow `docs/debugging.md`. It ends with a labeled recording
   committed to `recordings/`, so the bug cannot return unnoticed.
-- No git remote exists. Commit on `feat/…` branches; pushing is not part of done.
+- Remote: `origin` → github.com/FlorianRiquelme/sleight. The backlog is its issue tracker (`gh issue`);
+  file follow-ups there, not in a TODO file. Commit on `feat/…` branches.
 - The external webcam has never enumerated on this machine (not in `--list`, not in the USB tree).
   Treat "camera not found" as hardware until proven otherwise.

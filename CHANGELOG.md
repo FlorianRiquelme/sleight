@@ -6,6 +6,9 @@ first within a section.
 ## Unreleased
 
 ### Added
+- Menu bar icon reflects state (running/hand visible/paused/camera problem) and the menu surfaces
+  camera and Accessibility problems with "Open … Settings…" shortcuts.
+- "Launch at Login" menu toggle via `SMAppService` (only works from `build/sleight.app`).
 - Recording (`--record`, menu toggle) writes JSONL landmarks plus derived state; `replay <file>`
   re-runs a recording against the current or an alternate config and scores against a label.
 - Debug window: mirrored preview with finger-state-colored skeleton, palm center, swipe trail, and a
@@ -29,3 +32,5 @@ first within a section.
 
 ### Changed
 - Cooldown uses frame timestamps instead of wall clock so replays are deterministic.
+- The menu bar app now stays running and shows the problem when the camera is missing, denied, or
+  errors, instead of exiting (headless `--no-ui` still exits non-zero).
