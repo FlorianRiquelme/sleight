@@ -10,6 +10,14 @@ struct Hand {
     let confidence: Float
 
     subscript(_ j: Joint) -> CGPoint? { points[j] }
+
+    /// Stable reference point for motion tracking.
+    var palmCenter: CGPoint? {
+        let pts = [Joint.wrist, .indexMCP, .middleMCP, .ringMCP, .littleMCP].compactMap { points[$0] }
+        guard !pts.isEmpty else { return nil }
+        return CGPoint(x: pts.map(\.x).reduce(0, +) / CGFloat(pts.count),
+                       y: pts.map(\.y).reduce(0, +) / CGFloat(pts.count))
+    }
 }
 
 final class HandPoseDetector {

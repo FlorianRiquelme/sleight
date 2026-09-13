@@ -11,7 +11,7 @@ final class StatusBarController: NSObject {
     private let cameraMenu = NSMenu()
     private var flashReset: DispatchWorkItem?
 
-    private static let emoji: [Gesture: String] = [.openPalm: "✋", .fist: "✊", .twoFingers: "✌️", .thumbsUp: "👍"]
+    private static let emoji: [Gesture: String] = [.openPalm: "✋", .fist: "✊", .twoFingers: "✌️", .thumbsUp: "👍", .swipeLeft: "👈", .swipeRight: "👉"]
 
     init(engine: Engine, device: AVCaptureDevice) {
         self.engine = engine

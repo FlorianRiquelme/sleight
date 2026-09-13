@@ -12,6 +12,7 @@ let package = Package(
             linkerSettings: [
                 .unsafeFlags(["-Xlinker", "-sectcreate", "-Xlinker", "__TEXT", "-Xlinker", "__info_plist", "-Xlinker", "Sources/gesturecam/Info.plist"])
             ]
-        )
+        ),
+        .testTarget(name: "gesturecamTests", dependencies: ["gesturecam"], path: "Tests/gesturecamTests")
     ]
 )

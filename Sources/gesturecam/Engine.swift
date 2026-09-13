@@ -1,5 +1,6 @@
 import AVFoundation
 import Foundation
+import QuartzCore
 
 /// Camera → hand pose → classifier → stabilizer → cooldown → onGesture.
 final class Engine {
@@ -8,6 +9,7 @@ final class Engine {
     private let detector = HandPoseDetector()
     private let classifier = GestureClassifier()
     private var stabilizer: GestureStabilizer
+    private var swipe: SwipeDetector
     private var lastFire = Date.distantPast
     private var handVisible = false
     private var frames = 0
@@ -23,6 +25,14 @@ final class Engine {
     init(config: Config) {
         self.config = config
         self.stabilizer = GestureStabilizer(holdFrames: config.holdFrames)
+        self.swipe = Engine.makeSwipe(config)
+    }
+
+    private static func makeSwipe(_ c: Config) -> SwipeDetector {
+        var s = SwipeDetector()
+        s.minDistance = CGFloat(c.swipeMinDistance)
+        s.window = c.swipeWindowSeconds
+        return s
     }
 
     func start(device: AVCaptureDevice) throws {
@@ -37,12 +47,21 @@ final class Engine {
         camera?.stop()
         camera = nil
         stabilizer = GestureStabilizer(holdFrames: config.holdFrames)
+        swipe.reset()
         if handVisible { handVisible = false; onHand?(false) }
     }
 
     func apply(_ newConfig: Config) {
         config = newConfig
         stabilizer = GestureStabilizer(holdFrames: newConfig.holdFrames)
+        swipe = Engine.makeSwipe(newConfig)
+    }
+
+    private func fire(_ g: Gesture) {
+        let now = Date()
+        guard now.timeIntervalSince(lastFire) >= config.cooldownSeconds else { return }
+        lastFire = now
+        onGesture?(g)
     }
 
     private func handle(_ buf: CMSampleBuffer) {
@@ -51,17 +70,25 @@ final class Engine {
         if (hand != nil) != handVisible {
             handVisible = hand != nil
             onHand?(handVisible)
+            if !handVisible { swipe.reset() }
         }
-        let raw = hand.flatMap(classifier.classify)
-        if let h = hand { onRaw?(h, raw) }
 
-        if let g = stabilizer.push(raw) {
-            let now = Date()
-            if now.timeIntervalSince(lastFire) >= config.cooldownSeconds {
-                lastFire = now
-                onGesture?(g)
+        // Dynamic: swipes on palm motion.
+        let t = CACurrentMediaTime()
+        var moving = false
+        if let center = hand?.palmCenter {
+            if let s = swipe.push(center, at: t) {
+                _ = stabilizer.push(nil)
+                fire(s)
+                return
             }
+            moving = swipe.recentSpeed(at: t) > CGFloat(config.stillSpeed)
         }
+
+        // Static: only while the hand is still, so a moving open palm doesn't also fire.
+        let raw = moving ? nil : hand.flatMap(classifier.classify)
+        if let h = hand { onRaw?(h, raw) }
+        if let g = stabilizer.push(raw) { fire(g) }
 
         let now = Date()
         let elapsed = now.timeIntervalSince(lastReport)

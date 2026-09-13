@@ -3,6 +3,7 @@ import Vision
 
 enum Gesture: String, CaseIterable {
     case openPalm, fist, twoFingers, thumbsUp
+    case swipeLeft, swipeRight   // dynamic, produced by SwipeDetector
 }
 
 /// Rule-based static pose classifier on Vision hand landmarks.

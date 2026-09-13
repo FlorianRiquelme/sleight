@@ -8,6 +8,7 @@ enum Action: Codable, Equatable {
     case media(String)
     case shell(String)
     case spotify(String)
+    case none
 
     private enum K: String, CodingKey { case type, keys, key, command }
 
@@ -18,6 +19,7 @@ enum Action: Codable, Equatable {
         case "media": self = .media(try c.decode(String.self, forKey: .key))
         case "shell": self = .shell(try c.decode(String.self, forKey: .command))
         case "spotify": self = .spotify(try c.decode(String.self, forKey: .command))
+        case "none": self = .none
         case let t: throw DecodingError.dataCorruptedError(forKey: .type, in: c, debugDescription: "unknown action type \(t)")
         }
     }
@@ -29,6 +31,7 @@ enum Action: Codable, Equatable {
         case .media(let k): try c.encode("media", forKey: .type); try c.encode(k, forKey: .key)
         case .shell(let s): try c.encode("shell", forKey: .type); try c.encode(s, forKey: .command)
         case .spotify(let s): try c.encode("spotify", forKey: .type); try c.encode(s, forKey: .command)
+        case .none: try c.encode("none", forKey: .type)
         }
     }
 
@@ -38,6 +41,7 @@ enum Action: Codable, Equatable {
         case .media(let k): return "media \(k)"
         case .shell(let s): return "shell \(s.prefix(40))"
         case .spotify(let s): return "spotify \(s)"
+        case .none: return "none"
         }
     }
 }
@@ -46,6 +50,9 @@ struct Config: Codable {
     var camera: String?
     var holdFrames: Int
     var cooldownSeconds: Double
+    var swipeMinDistance: Double
+    var swipeWindowSeconds: Double
+    var stillSpeed: Double          // static gestures only fire below this palm speed (frame widths/s)
     var mappings: [String: Action]
 
     static let path = FileManager.default.homeDirectoryForCurrentUser
@@ -55,19 +62,26 @@ struct Config: Codable {
         camera: nil,
         holdFrames: 8,
         cooldownSeconds: 1.0,
+        swipeMinDistance: 0.25,
+        swipeWindowSeconds: 0.5,
+        stillSpeed: 0.4,
         mappings: [
             Gesture.openPalm.rawValue: .spotify("playpause"),
             Gesture.fist.rawValue: .media("mute"),
             Gesture.twoFingers.rawValue: .spotify("next"),
             Gesture.thumbsUp.rawValue: .shell("osascript -e 'display notification \"👍\" with title \"gesturecam\"'"),
+            // Natural direction: content follows the hand. Swipe left → space on the right.
+            Gesture.swipeLeft.rawValue: .key("ctrl+right"),
+            Gesture.swipeRight.rawValue: .key("ctrl+left"),
         ]
     )
 
-    private enum K: String, CodingKey { case camera, holdFrames, cooldownSeconds, mappings }
+    private enum K: String, CodingKey { case camera, holdFrames, cooldownSeconds, swipeMinDistance, swipeWindowSeconds, stillSpeed, mappings }
 
-    init(camera: String?, holdFrames: Int, cooldownSeconds: Double, mappings: [String: Action]) {
-        self.camera = camera; self.holdFrames = holdFrames
-        self.cooldownSeconds = cooldownSeconds; self.mappings = mappings
+    init(camera: String?, holdFrames: Int, cooldownSeconds: Double, swipeMinDistance: Double, swipeWindowSeconds: Double, stillSpeed: Double, mappings: [String: Action]) {
+        self.camera = camera; self.holdFrames = holdFrames; self.cooldownSeconds = cooldownSeconds
+        self.swipeMinDistance = swipeMinDistance; self.swipeWindowSeconds = swipeWindowSeconds
+        self.stillSpeed = stillSpeed; self.mappings = mappings
     }
 
     init(from d: Decoder) throws {
@@ -76,10 +90,17 @@ struct Config: Codable {
         camera = try c.decodeIfPresent(String.self, forKey: .camera)
         holdFrames = try c.decodeIfPresent(Int.self, forKey: .holdFrames) ?? def.holdFrames
         cooldownSeconds = try c.decodeIfPresent(Double.self, forKey: .cooldownSeconds) ?? def.cooldownSeconds
-        mappings = try c.decodeIfPresent([String: Action].self, forKey: .mappings) ?? def.mappings
+        swipeMinDistance = try c.decodeIfPresent(Double.self, forKey: .swipeMinDistance) ?? def.swipeMinDistance
+        swipeWindowSeconds = try c.decodeIfPresent(Double.self, forKey: .swipeWindowSeconds) ?? def.swipeWindowSeconds
+        stillSpeed = try c.decodeIfPresent(Double.self, forKey: .stillSpeed) ?? def.stillSpeed
+        // Gestures missing from the file get their default; map to {"type":"none"} to disable one.
+        mappings = def.mappings.merging(try c.decodeIfPresent([String: Action].self, forKey: .mappings) ?? [:]) { $1 }
     }
 
-    func action(for g: Gesture) -> Action? { mappings[g.rawValue] }
+    func action(for g: Gesture) -> Action? {
+        if case .none? = mappings[g.rawValue] { return nil }
+        return mappings[g.rawValue]
+    }
 
     /// Loads the config, writing the default file first if none exists.
     static func load() throws -> Config {
