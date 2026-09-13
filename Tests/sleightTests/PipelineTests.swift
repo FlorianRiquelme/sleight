@@ -200,6 +200,41 @@ final class PipelineTests: XCTestCase {
         XCTAssertEqual(fired, [.fist, .openPalm])
     }
 
+    func testSwipeIsNotSwallowedByAStaticGestureCooldown() {
+        // An open hand pauses long enough before the stroke to fire openPalm (issue #3), then
+        // swipes 0.4 s later, inside the 1 s cooldown. The swipe must still fire.
+        let p = Pipeline(config: config)
+        var fired: [Gesture] = []
+        let n = config.holdFrames + 2
+        let still = hand(index: true, middle: true, ring: true, little: true, thumbOut: true)
+        for i in 0..<n {
+            if let g = p.process(still, at: Double(i) / 30).fired { fired.append(g) }
+        }
+        XCTAssertEqual(fired, [.openPalm])
+        for i in 0..<12 {
+            let h = hand(index: true, middle: true, ring: true, little: true, thumbOut: true, offset: CGFloat(i) * 0.03)
+            if let g = p.process(h, at: Double(n + i) / 30).fired { fired.append(g) }
+        }
+        XCTAssertEqual(fired, [.openPalm, .swipeLeft])
+        XCTAssertLessThan(Double(n + 12) / 30, config.cooldownSeconds, "the swipe must land inside the openPalm cooldown for this test to mean anything")
+    }
+
+    func testSwipesStillCoolDownAfterEachOther() {
+        // Same stroke three times: at 0 s, 0.7 s (inside the cooldown) and 2 s.
+        let p = Pipeline(config: config)
+        var fired: [(Double, Gesture)] = []
+        func stroke(at t0: Double) {
+            for i in 0..<10 {
+                let h = hand(index: true, middle: true, ring: true, little: true, thumbOut: true, offset: CGFloat(i) * 0.03)
+                let t = t0 + Double(i) / 30
+                if let g = p.process(h, at: t).fired { fired.append((t, g)) }
+            }
+        }
+        stroke(at: 0); stroke(at: 0.7); stroke(at: 2)
+        XCTAssertEqual(fired.map(\.1), [.swipeLeft, .swipeLeft])
+        XCTAssertGreaterThanOrEqual((fired.last?.0 ?? 0) - (fired.first?.0 ?? 0), config.cooldownSeconds)
+    }
+
     func testRecordingRoundTrip() throws {
         let dir = FileManager.default.temporaryDirectory.appendingPathComponent("sleight-test-\(UUID().uuidString)")
         let url = dir.appendingPathComponent("rec.jsonl")

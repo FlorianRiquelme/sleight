@@ -6,6 +6,9 @@ first within a section.
 ## Unreleased
 
 ### Fixed
+- A swipe right after a static gesture is no longer lost to that gesture's cooldown: an open hand
+  that pauses before the stroke fires openPalm, and the swipe half a second later now fires too.
+  Swipes still cool down after each other. (#3)
 - Gestures work from one step back: the extent floors drop to what the far fixtures measure, and
   open palm, fist and two fingers instead require the palm to face the camera (knuckle width over
   palm length ≤ 0.6), which is what kept the idle fixture clean.

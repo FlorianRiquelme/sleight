@@ -180,3 +180,21 @@ still explains the fixtures.
 **Revisit when:** a fixture arrives that the rules cannot pass without a new hand-written feature,
 or the set gains another user or hand. Then the tree is the first thing to run, and if it holds,
 the personal model goes behind the `Pipeline` interface with the rules as fallback and explainer.
+
+## 2026-09-13 A swipe is not blocked by a static gesture's cooldown
+The two wind-up takes for #2 (kept in `~/.config/sleight/recordings/*-windup.jsonl`) paused an
+open hand 17 and 33 frames before the stroke; openPalm fired and its 1 s cooldown swallowed the
+swipe 0.47 s later. The cooldown exists to stop flicker between two poses; a swipe is a distinct
+event with its own suppression window and return lockout in `SwipeDetector`. `Pipeline.fire` now
+checks a swipe against the last swipe only; static gestures still cool down after any fire. Both
+takes replay with every swipe back and the idle fixture gains no swipe.
+The other two options in #3 were measured and not taken. Normalizing `stillSpeed` by palm length:
+the far drift stays under 3 palm lengths/s for 23 consecutive frames (hold is 15) while deliberate
+holds at arm's length reach 4–5, so the unit does not separate the two. Raising `holdFrames`: the
+swipeLeft take is genuinely still (≤ 0.05 frame widths/s) for 33 frames, which no hold under
+1.1 s covers, and an open hand held still that long is an open palm by definition
+(`recordings/README.md`). The openPalm before a paused wind-up therefore still fires, and the two
+takes stay out of `recordings/` because of it.
+**Revisit when:** a real-use swipe recording with natural wind-ups exists (#3). If those pause
+≥ 15 frames routinely, the pause is the normal case and open palm needs a different trigger than
+a hold, not a longer one.

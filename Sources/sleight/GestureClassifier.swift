@@ -4,6 +4,8 @@ import Vision
 enum Gesture: String, CaseIterable {
     case openPalm, fist, twoFingers, thumbsUp
     case swipeLeft, swipeRight   // dynamic, produced by SwipeDetector
+
+    var isSwipe: Bool { self == .swipeLeft || self == .swipeRight }
 }
 
 /// Everything the classifier derived from one hand, for the debug view.

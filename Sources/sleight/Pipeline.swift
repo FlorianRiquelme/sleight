@@ -17,7 +17,8 @@ final class Pipeline {
     private var classifier: GestureClassifier
     private var stabilizer: GestureStabilizer
     private var swipe: SwipeDetector
-    private var lastFire: TimeInterval = -.infinity
+    private var lastFire: TimeInterval = -.infinity    // any gesture
+    private var lastSwipe: TimeInterval = -.infinity   // swipes only
     private var primeAfterSwipe = false
     private(set) var handVisible = false
 
@@ -45,6 +46,7 @@ final class Pipeline {
         stabilizer = GestureStabilizer(holdFrames: config.holdFrames)
         swipe = Pipeline.makeSwipe(config)
         lastFire = -.infinity
+        lastSwipe = -.infinity
         primeAfterSwipe = false
         handVisible = false
     }
@@ -90,9 +92,14 @@ final class Pipeline {
         return r
     }
 
+    /// Static gestures cool down after any fire: the cooldown guards against flicker between two
+    /// poses. A swipe cools down only after another swipe: it is a distinct event with its own
+    /// guards in `SwipeDetector`, and an open hand that pauses before the stroke fires openPalm,
+    /// whose cooldown used to swallow the swipe 0.5 s later (issue #3).
     private func fire(_ g: Gesture, at t: TimeInterval) -> Gesture? {
-        guard t - lastFire >= config.cooldownSeconds else { return nil }
+        guard t - (g.isSwipe ? lastSwipe : lastFire) >= config.cooldownSeconds else { return nil }
         lastFire = t
+        if g.isSwipe { lastSwipe = t }
         return g
     }
 }
