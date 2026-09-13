@@ -7,9 +7,9 @@ On-device only (Apple Vision), no frames stored or sent anywhere.
 
 | Gesture | Default action |
 |---|---|
-| ✋ open palm | media play/pause |
+| ✋ open palm | Spotify play/pause |
 | ✊ fist | media mute |
-| ✌️ two fingers | media next track |
+| ✌️ two fingers | Spotify next track |
 | 👍 thumbs up | shell: notification (placeholder, edit it) |
 
 A gesture fires once when held for `holdFrames` frames (~250ms), then needs a
@@ -40,7 +40,7 @@ Needs Camera permission, and Accessibility permission to post key events.
   "holdFrames": 8,
   "cooldownSeconds": 1,
   "mappings": {
-    "openPalm":   { "type": "media", "key": "playpause" },
+    "openPalm":   { "type": "spotify", "command": "playpause" },
     "fist":       { "type": "key",   "keys": "cmd+shift+m" },
     "twoFingers": { "type": "shell", "command": "open -a Notes" }
   }
@@ -48,7 +48,8 @@ Needs Camera permission, and Accessibility permission to post key events.
 ```
 
 Action types:
-- `media` — `playpause`, `next`, `previous`, `mute`, `volumeup`, `volumedown`, `brightnessup`, `brightnessdown`
+- `spotify` — `playpause`, `play`, `pause`, `next`, `previous` (talks to Spotify directly via Apple Events)
+- `media` — system media keys, go to whatever app is the current player: `playpause`, `next`, `previous`, `mute`, `volumeup`, `volumedown`, `brightnessup`, `brightnessdown`
 - `key` — modifiers `cmd`, `shift`, `alt`, `ctrl`, `fn` plus a key: letters, digits, `space`, `return`, `tab`, `esc`, arrows, `f1`–`f12`, punctuation
 - `shell` — run in `/bin/zsh -lc`
 

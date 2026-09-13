@@ -2,11 +2,13 @@ import AppKit
 import Carbon.HIToolbox
 
 enum ActionError: Error, CustomStringConvertible {
-    case unknownKey(String), unknownMediaKey(String)
+    case unknownKey(String), unknownMediaKey(String), unknownSpotifyCommand(String), appleScript(String)
     var description: String {
         switch self {
         case .unknownKey(let k): return "unknown key '\(k)'"
         case .unknownMediaKey(let k): return "unknown media key '\(k)'"
+        case .unknownSpotifyCommand(let k): return "unknown spotify command '\(k)'"
+        case .appleScript(let m): return "AppleScript: \(m)"
         }
     }
 }
@@ -17,6 +19,23 @@ enum ActionRunner {
         case .key(let combo): try pressKeys(combo)
         case .media(let name): try pressMedia(name)
         case .shell(let cmd): shell(cmd)
+        case .spotify(let cmd): try spotify(cmd)
+        }
+    }
+
+    // MARK: Spotify via Apple Events (targets Spotify regardless of which app macOS thinks is "now playing")
+
+    private static let spotifyCommands: [String: String] = [
+        "playpause": "playpause", "play": "play", "pause": "pause",
+        "next": "next track", "previous": "previous track", "prev": "previous track",
+    ]
+
+    static func spotify(_ command: String) throws {
+        guard let verb = spotifyCommands[command.lowercased()] else { throw ActionError.unknownSpotifyCommand(command) }
+        var error: NSDictionary?
+        NSAppleScript(source: "tell application \"Spotify\" to \(verb)")?.executeAndReturnError(&error)
+        if let error, let msg = error[NSAppleScript.errorMessage] as? String {
+            throw ActionError.appleScript(msg)
         }
     }
 
