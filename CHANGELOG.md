@@ -6,6 +6,8 @@ first within a section.
 ## Unreleased
 
 ### Added
+- `scripts/start.sh` rebuilds and relaunches the menu bar app in one command; `--dev` runs a debug
+  build in the foreground with the debug window and verbose logs.
 - Menu bar icon reflects state (running/hand visible/paused/camera problem) and the menu surfaces
   camera and Accessibility problems with "Open … Settings…" shortcuts.
 - "Launch at Login" menu toggle via `SMAppService` (only works from `build/sleight.app`).

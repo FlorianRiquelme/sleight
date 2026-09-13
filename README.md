@@ -42,6 +42,7 @@ swift build
 .build/debug/sleight --record out.jsonl --label fist   # record landmarks while you perform a gesture
 .build/debug/sleight replay out.jsonl [-v] [--config other.json]   # re-run a recording offline
 ./scripts/bundle.sh                     # build/sleight.app
+./scripts/start.sh                      # rebuild the .app and relaunch it; --dev runs a debug build in the foreground
 swift test                              # swipe detector tests
 ```
 
