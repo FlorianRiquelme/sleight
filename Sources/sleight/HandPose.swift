@@ -19,10 +19,12 @@ struct Hand {
         return hypot(xs.max()! - xs.min()!, ys.max()! - ys.min()!)
     }
 
-    /// Stable reference point for motion tracking.
+    /// Stable reference point for motion tracking. Needs at least three of the five palm joints:
+    /// a hand half out of frame or mostly occluded yields one or two, and a "center" that jumps
+    /// between them as they flicker looked like a swipe in the idle fixture.
     var palmCenter: CGPoint? {
         let pts = [Joint.wrist, .indexMCP, .middleMCP, .ringMCP, .littleMCP].compactMap { points[$0] }
-        guard !pts.isEmpty else { return nil }
+        guard pts.count >= 3 else { return nil }
         return CGPoint(x: pts.map(\.x).reduce(0, +) / CGFloat(pts.count),
                        y: pts.map(\.y).reduce(0, +) / CGFloat(pts.count))
     }

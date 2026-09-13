@@ -5,7 +5,20 @@ first within a section.
 
 ## Unreleased
 
+### Fixed
+- Hands resting on the mouse or keyboard no longer fire fist, thumbs up or two fingers: closed
+  fingers must fold past their PIP, and a fist keeps its fingertips inside the palm.
+- No more phantom swipes when Vision alternates between both hands on the desk: a swipe is measured
+  from an open hand, and a jump or a handedness flip after a detection gap restarts the motion.
+- A far, curled hand no longer counts as a fist: closed poses have their own extent floor.
+
+### Changed
+- `minOpenExtent` default 0.28 → 0.30; new config key `minClosedExtent` (0.16) for fist and thumbs up.
+- `replay -v` and the HUD show the curled-finger count and fingertip reach; `TOO SMALL` names both floors.
+
 ### Added
+- `recordings/none-idle-10min.jsonl`: 12 minutes of ordinary desk life labeled `none`, the long
+  negative fixture that exposed the misfires above.
 - `scripts/start.sh` rebuilds and relaunches the menu bar app in one command; `--dev` runs a debug
   build in the foreground with the debug window and verbose logs.
 - Menu bar icon reflects state (running/hand visible/paused/camera problem) and the menu surfaces

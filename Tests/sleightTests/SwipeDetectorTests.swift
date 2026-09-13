@@ -1,4 +1,5 @@
 import XCTest
+import Vision
 @testable import sleight
 
 final class SwipeDetectorTests: XCTestCase {
@@ -50,6 +51,43 @@ final class SwipeDetectorTests: XCTestCase {
             if let g = d.push(CGPoint(x: 0.3 + 0.04 * CGFloat(i), y: 0.5), at: TimeInterval(i) / 30) { fired = g }
         }
         XCTAssertEqual(fired, .swipeLeft)
+    }
+
+    func testSwipeStartsFromAnOpenHand() {
+        var d = SwipeDetector()
+        var fired: Gesture?
+        for i in 0...9 {
+            // Closed while still, opens only for the last frames: nothing to measure from.
+            if let g = d.push(CGPoint(x: 0.3 + 0.04 * CGFloat(i), y: 0.5), open: i >= 8, at: TimeInterval(i) / 30) { fired = g }
+        }
+        XCTAssertNil(fired)
+    }
+
+    func testTeleportRestartsTheBuffer() {
+        // An open hand standing still, then a hand a quarter frame away on the next frame: not motion.
+        var d = SwipeDetector()
+        var fired: Gesture?
+        for i in 0...20 {
+            let x: CGFloat = i < 10 ? 0.3 : 0.6
+            if let g = d.push(CGPoint(x: x, y: 0.5), at: TimeInterval(i) / 30) { fired = g }
+        }
+        XCTAssertNil(fired)
+    }
+
+    func testHandednessFlipAcrossGapIsAnotherHand() {
+        // Same motion with a 0.2s dropout in the middle: fires if the hand comes back with the same
+        // handedness, not if it comes back as the other hand.
+        func run(back: VNChirality) -> Gesture? {
+            var d = SwipeDetector()
+            var fired: Gesture?
+            for i in 0...12 where !(4...9).contains(i) {
+                let side: VNChirality = i < 4 ? .left : back
+                if let g = d.push(CGPoint(x: 0.3 + 0.03 * CGFloat(i), y: 0.5), side: side, at: TimeInterval(i) / 30) { fired = g }
+            }
+            return fired
+        }
+        XCTAssertEqual(run(back: .left), .swipeLeft)
+        XCTAssertNil(run(back: .right))
     }
 
     func testRecentSpeedReflectsMotion() {

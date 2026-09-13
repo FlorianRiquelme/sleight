@@ -3,15 +3,19 @@ import Vision
 @testable import sleight
 
 final class PipelineTests: XCTestCase {
-    /// Synthetic upright right hand. `curl` per finger folds the tip back toward the wrist.
-    private func hand(index: Bool, middle: Bool, ring: Bool, little: Bool, thumbOut: Bool, thumbUp: Bool = false, offset: CGFloat = 0, scale: CGFloat = 1) -> Hand {
-        let h = rawHand(index: index, middle: middle, ring: ring, little: little, thumbOut: thumbOut, thumbUp: thumbUp, offset: offset)
+    /// How a non-extended finger sits: folded into the palm, hanging relaxed at PIP length, or
+    /// curled past its PIP but from beyond the knuckles (fingers draped over a mouse).
+    enum Closed { case curled, relaxed, hanging }
+
+    /// Synthetic upright right hand. Non-extended fingers take the `closed` style.
+    private func hand(index: Bool, middle: Bool, ring: Bool, little: Bool, thumbOut: Bool, thumbUp: Bool = false, offset: CGFloat = 0, scale: CGFloat = 1, closed: Closed = .curled) -> Hand {
+        let h = rawHand(index: index, middle: middle, ring: ring, little: little, thumbOut: thumbOut, thumbUp: thumbUp, offset: offset, closed: closed)
         guard scale != 1, let w = h[.wrist] else { return h }
         let pts = h.points.mapValues { CGPoint(x: w.x + ($0.x - w.x) * scale, y: w.y + ($0.y - w.y) * scale) }
         return Hand(chirality: h.chirality, points: pts, confidence: h.confidence)
     }
 
-    private func rawHand(index: Bool, middle: Bool, ring: Bool, little: Bool, thumbOut: Bool, thumbUp: Bool, offset: CGFloat) -> Hand {
+    private func rawHand(index: Bool, middle: Bool, ring: Bool, little: Bool, thumbOut: Bool, thumbUp: Bool, offset: CGFloat, closed: Closed) -> Hand {
         var p: [sleight.Joint: CGPoint] = [:]
         let wrist = CGPoint(x: 0.5 + offset, y: 0.3)
         p[.wrist] = wrist
@@ -24,9 +28,18 @@ final class PipelineTests: XCTestCase {
         for (mcp, pip, dip, tip, dx, ext) in fingers {
             let x = wrist.x + dx
             p[mcp] = CGPoint(x: x, y: 0.45)
-            p[pip] = CGPoint(x: x, y: ext ? 0.52 : 0.50)
-            p[dip] = CGPoint(x: x, y: ext ? 0.58 : 0.46)
-            p[tip] = CGPoint(x: x, y: ext ? 0.64 : 0.40)
+            // Wrist is at y 0.30, palm length 0.15. Extended: tip/PIP 1.55. Curled: tip/PIP 0.5,
+            // tip 0.67 palm lengths. Relaxed: tip/PIP 1.0. Hanging: tip/PIP 0.69 but tip 1.2 palms.
+            let (py, dy, ty): (CGFloat, CGFloat, CGFloat)
+            switch (ext, closed) {
+            case (true, _): (py, dy, ty) = (0.52, 0.58, 0.64)
+            case (false, .curled): (py, dy, ty) = (0.50, 0.46, 0.40)
+            case (false, .relaxed): (py, dy, ty) = (0.50, 0.51, 0.50)
+            case (false, .hanging): (py, dy, ty) = (0.56, 0.53, 0.48)
+            }
+            p[pip] = CGPoint(x: x, y: py)
+            p[dip] = CGPoint(x: x, y: dy)
+            p[tip] = CGPoint(x: x, y: ty)
         }
         // Thumb: out to the side and up, or tucked over the index knuckle.
         p[.thumbCMC] = CGPoint(x: wrist.x - 0.05, y: 0.36)
@@ -54,7 +67,7 @@ final class PipelineTests: XCTestCase {
         XCTAssertEqual(c.classify(hand(index: false, middle: false, ring: false, little: false, thumbOut: true, thumbUp: true)), .thumbsUp)
     }
 
-    func testSmallOpenHandIsRejectedButFistIsNot() {
+    func testSmallHandsAreRejected() {
         let c = GestureClassifier()
         let palm = hand(index: true, middle: true, ring: true, little: true, thumbOut: true)
         XCTAssertGreaterThan(palm.extent, c.minOpenExtent, "synthetic palm must be large enough to count")
@@ -62,8 +75,42 @@ final class PipelineTests: XCTestCase {
         let far = hand(index: true, middle: true, ring: true, little: true, thumbOut: true, scale: 0.5)
         XCTAssertNil(c.classify(far))
         XCTAssertEqual(c.features(far)?.tooSmall, true)
+        // A fist is compact, so its floor is lower: 0.8 scale still counts, 0.5 does not.
+        let fist = hand(index: false, middle: false, ring: false, little: false, thumbOut: false)
+        XCTAssertLessThan(fist.extent, c.minOpenExtent, "a fist at gesture distance is smaller than an open palm")
+        XCTAssertEqual(c.classify(hand(index: false, middle: false, ring: false, little: false, thumbOut: false, scale: 0.8)), .fist)
         let farFist = hand(index: false, middle: false, ring: false, little: false, thumbOut: false, scale: 0.5)
-        XCTAssertEqual(c.classify(farFist), .fist, "closed poses are not extent-gated")
+        XCTAssertNil(c.classify(farFist))
+        XCTAssertEqual(c.features(farFist)?.tooSmall, true)
+    }
+
+    func testClosedPosesNeedCurledFingers() {
+        let c = GestureClassifier()
+        // Fingers hanging relaxed (tip at PIP length): a hand on a mouse or keyboard, not a fist.
+        let relaxed = hand(index: false, middle: false, ring: false, little: false, thumbOut: false, closed: .relaxed)
+        XCTAssertNil(c.classify(relaxed))
+        XCTAssertEqual(c.features(relaxed)?.curled, 0)
+        XCTAssertNil(c.classify(hand(index: false, middle: false, ring: false, little: false, thumbOut: true, thumbUp: true, closed: .relaxed)))
+        XCTAssertNil(c.classify(hand(index: true, middle: true, ring: false, little: false, thumbOut: false, closed: .relaxed)),
+                     "two fingers needs the other two folded, not merely not extended")
+        // Curled past the PIP but from beyond the knuckles (draped over a mouse): still not a fist,
+        // while a thumbs up is allowed to project its folded fingers past the knuckles.
+        let hanging = hand(index: false, middle: false, ring: false, little: false, thumbOut: false, closed: .hanging)
+        XCTAssertEqual(c.features(hanging)?.curled, 4)
+        XCTAssertGreaterThan(c.features(hanging)?.tipReach ?? 0, GestureClassifier.fistTipReach)
+        XCTAssertNil(c.classify(hanging))
+        XCTAssertEqual(c.classify(hand(index: false, middle: false, ring: false, little: false, thumbOut: true, thumbUp: true, closed: .hanging)), .thumbsUp)
+    }
+
+    func testClosedHandJumpingBetweenPositionsDoesNotSwipe() {
+        // Vision alternating between two closed hands on the desk: the palm center teleports.
+        let p = Pipeline(config: config)
+        var fired: [Gesture] = []
+        for i in 0..<30 {
+            let h = hand(index: false, middle: false, ring: false, little: false, thumbOut: false, offset: i % 2 == 0 ? 0 : 0.3)
+            if let g = p.process(h, at: Double(i) / 30).fired { fired.append(g) }
+        }
+        XCTAssertEqual(fired, [])
     }
 
     func testOpenHandLingeringAfterSwipeDoesNotFire() {

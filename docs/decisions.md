@@ -78,3 +78,43 @@ an optional video sidecar; the JSONL stays the contract.
 Cooldown and swipe windows use the frame timestamp so a recording replays identically regardless
 of machine speed. `Engine` supplies `CACurrentMediaTime()` live and the recorded `t` on replay.
 **Revisit if:** never; anything wall-clock belongs in `Engine`.
+
+## 2026-09-13 Closed poses need curled fingers, and a fist keeps its tips inside the palm
+The 12-minute idle fixture (`recordings/none-idle-10min.jsonl`) fired fist 15 times, thumbs up 3,
+two fingers once: a hand on the mouse or keyboard has no extended finger, so it read as a fist.
+"Not extended" (tip ≤ 1.15× the PIP's distance from the wrist) is not "folded". Every deliberate
+fist, thumbs up and two-fingers frame folds its closed fingers to 0.41–0.84 of the PIP distance;
+resting hands sit at 0.84–1.15. Closed fingers now need `curlRatio` 0.85, the mirror of the 1.15
+extension test. A fist additionally keeps every tip within 0.9 palm lengths of the wrist
+(fixtures 0.61–0.71): fingers draped over a mouse curl past their PIP too, but from beyond the
+knuckles (0.99–1.28). Thumbs up is exempt because the edge-on hand projects its folded fingers
+past the knuckles (1.05–1.43).
+**Revisit if:** a user's natural fist reads `curl<4` or `tips≥0.9` in `replay -v` / the HUD.
+
+## 2026-09-13 A swipe starts from an open hand; a jump or a handedness flip after a gap is another hand
+The idle fixture produced 19 phantom swipes. Vision tracks one hand (`maximumHandCount = 1`) and
+with both hands on the desk it alternates between them frame to frame, so the palm center jumps a
+quarter of the frame; a palm center averaged from one or two visible joints jitters the same way.
+Three guards, each measured against the seven fixture swipes: the palm center needs three of the
+five palm joints; the swipe is measured from the oldest sample with ≥3 extended fingers in the
+window (real swipes wind up open and lose finger joints only in the fast phase, the desk hands are
+closed or half out of frame); and the buffer restarts on a step faster than 6 frame widths/s
+(fixture swipes peak at 4.7, hand switches show 6.5–9.2) or when the hand returns from a >0.1s gap
+with the other handedness (Vision flips handedness frame to frame during brisk motion, but only a
+different hand comes back flipped after a gap). A restarted frame also counts as moving, so the
+static hold does not accumulate across two alternating hands.
+Cost: one of the three attempts in `swipeLeft-brisk` (t=2.3s) has no frame with countable
+fingers and no longer fires; two of three there and four of four in `swipeRight-brisk` remain.
+**Revisit if:** users report missed swipes; the first thing to check is whether their swipe frames
+show `I1 M1 R1` in `replay -v` before the fast phase. Requiring open fingers at both ends or a
+fully located palm at the end was tried and lost every left swipe.
+
+## 2026-09-13 Extent floors: open poses 0.30, closed poses 0.16
+Supersedes "closed poses are not gated" above; its revisit condition (a fist false positive in a
+`none` fixture) arrived. An open hand held up while talking reaches extent 0.29 (desk hands 0.26,
+deliberate open palms 0.33), so `minOpenExtent` moves 0.28 → 0.30. A curled hand on the far side
+of the desk passes the finger rules at extent 0.12–0.14 while deliberate fists measure 0.19–0.25,
+so fist and thumbs up now need `minClosedExtent` 0.16. Both are config knobs and the HUD prints
+both floors on `TOO SMALL`.
+**Revisit if:** a user gestures from farther back than arm's length, or the fixtures are
+re-recorded at another distance; the margins are ~10% on both floors.

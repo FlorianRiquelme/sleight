@@ -28,6 +28,9 @@ the result.
   returns, the session stops, and you get the camera line with no frames ever.
 - Vision coordinates: origin bottom-left, normalized 0–1, **not mirrored**. The user's right is
   image-left, so user-rightward motion has negative dx. The debug view mirrors for display only.
+- Vision returns one hand (`maximumHandCount = 1`) and, with both hands visible, alternates between
+  them frame to frame; chirality flips and the palm center jumps. A trajectory in a recording is not
+  one hand until proven so. Half-visible hands report 1–10 joints and Vision still calls them a hand.
 - Tests that `import Vision` alongside `@testable import sleight` must write
   `sleight.Joint`; bare `Joint` is ambiguous.
 - The executable embeds `Info.plist` via `-sectcreate` so the camera prompt works unbundled. Keep

@@ -18,9 +18,11 @@ Goal: turn "it sometimes triggers when I rest my hand" into a committed fixture 
    recipe in `CLAUDE.md`.
 
 3. **Find the flipping test.** `replay <file> -v` prints per frame:
-   `pose=… I1 M1 R0 L0 T1(s1 c1 u0) hold=5/8 speed=0.03`. Read the frames just before the fire.
-   Each flag maps to one rule in `GestureClassifier.features` (I/M/R/L = finger extended,
-   T = thumb, s/c/u = straight/clear/up). The flag that disagrees with reality names the threshold.
+   `pose=… I1 M1 R0 L0 curl=2 tips=1.12 T1(s1 c1 u0) ext=0.31 hold=5/15 speed=0.03`. Read the
+   frames just before the fire. Each flag maps to one rule in `GestureClassifier.features`
+   (I/M/R/L = finger extended, curl = fingers folded past their PIP, tips = farthest fingertip in
+   palm lengths, T = thumb, s/c/u = straight/clear/up, ext = extent). The flag that disagrees with
+   reality names the threshold.
    → done when you can say which single comparison is wrong and by roughly how much.
 
 4. **Change one threshold.** Edit it in `GestureClassifier.swift` or `Swipe.swift`. Rebuild.

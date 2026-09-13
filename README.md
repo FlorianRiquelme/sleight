@@ -24,9 +24,9 @@ A static gesture fires once when held for `holdFrames` frames (~500ms), then nee
 `cooldownSeconds` pause. Repeating the same gesture requires leaving the pose first.
 A swipe fires when the palm travels `swipeMinDistance` of the frame width within
 `swipeWindowSeconds`, mostly horizontally. `stillSpeed` is the palm speed above
-which static gestures are suppressed. Open palm and two fingers also need the hand's landmark
-extent to reach `minOpenExtent` of the frame; a hand resting on the desk is smaller and
-foreshortened, a hand raised to gesture is not.
+which static gestures are suppressed. Static gestures also need the hand's landmark extent to
+reach `minOpenExtent` (open palm, two fingers) or `minClosedExtent` (fist, thumbs up) of the frame;
+a hand resting on the desk is smaller and foreshortened, a hand raised to gesture is not.
 
 ## Run
 
@@ -94,7 +94,8 @@ and speed. `--config` replays against a different config file without touching t
   "swipeMinDistance": 0.25,
   "swipeWindowSeconds": 0.5,
   "stillSpeed": 0.4,
-  "minOpenExtent": 0.28,
+  "minOpenExtent": 0.30,
+  "minClosedExtent": 0.16,
   "mappings": {
     "openPalm":   { "type": "spotify", "command": "playpause" },
     "fist":       { "type": "media",   "key": "mute" },

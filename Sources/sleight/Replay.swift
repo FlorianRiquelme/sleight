@@ -15,8 +15,8 @@ enum Replay {
             if hand != nil { handFrames += 1 }
             let r = pipeline.process(hand, at: f.t)
             if verbose, let ft = r.features {
-                print(String(format: "%7.3f  pose=%-10@ I%d M%d R%d L%d T%d(s%d c%d u%d) ext=%.2f%@ hold=%d/%d speed=%.2f%@",
-                             f.t, ft.gesture?.rawValue ?? "-", ft.index ? 1 : 0, ft.middle ? 1 : 0, ft.ring ? 1 : 0, ft.little ? 1 : 0,
+                print(String(format: "%7.3f  pose=%-10@ I%d M%d R%d L%d curl=%d tips=%.2f T%d(s%d c%d u%d) ext=%.2f%@ hold=%d/%d speed=%.2f%@",
+                             f.t, ft.gesture?.rawValue ?? "-", ft.index ? 1 : 0, ft.middle ? 1 : 0, ft.ring ? 1 : 0, ft.little ? 1 : 0, ft.curled, Double(ft.tipReach),
                              ft.thumb ? 1 : 0, ft.thumbStraight ? 1 : 0, ft.thumbClear ? 1 : 0, ft.thumbUp ? 1 : 0,
                              Double(ft.extent), ft.tooSmall ? " SMALL" : "",
                              r.holdCount, pipeline.holdFrames, Double(r.speed), r.gated ? " GATED" : ""))

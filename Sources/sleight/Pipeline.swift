@@ -23,7 +23,7 @@ final class Pipeline {
 
     init(config: Config) {
         self.config = config
-        classifier = GestureClassifier(minOpenExtent: CGFloat(config.minOpenExtent))
+        classifier = GestureClassifier(minOpenExtent: CGFloat(config.minOpenExtent), minClosedExtent: CGFloat(config.minClosedExtent))
         stabilizer = GestureStabilizer(holdFrames: config.holdFrames)
         swipe = Pipeline.makeSwipe(config)
     }
@@ -41,7 +41,7 @@ final class Pipeline {
     }
 
     func reset() {
-        classifier = GestureClassifier(minOpenExtent: CGFloat(config.minOpenExtent))
+        classifier = GestureClassifier(minOpenExtent: CGFloat(config.minOpenExtent), minClosedExtent: CGFloat(config.minClosedExtent))
         stabilizer = GestureStabilizer(holdFrames: config.holdFrames)
         swipe = Pipeline.makeSwipe(config)
         lastFire = -.infinity
@@ -56,21 +56,23 @@ final class Pipeline {
         handVisible = hand != nil
 
         var r = Result(fired: nil, features: nil, gated: false, speed: 0, trail: [], candidate: nil, holdCount: 0)
+        let features = hand.flatMap(classifier.features)
         var swiped = false
         if let center = hand?.palmCenter {
-            if let s = swipe.push(center, at: t) {
+            if let s = swipe.push(center, open: features?.isOpen ?? false, side: hand?.chirality ?? .unknown, at: t) {
                 _ = stabilizer.push(nil)
                 r.fired = fire(s, at: t)
                 swiped = true
                 primeAfterSwipe = true
             } else {
                 r.speed = swipe.recentSpeed(at: t)
-                r.gated = r.speed > CGFloat(config.stillSpeed)
+                // A hand that jumped or changed handedness is not a still hand either.
+                r.gated = r.speed > CGFloat(config.stillSpeed) || swipe.restarted
             }
         }
 
         if !swiped {
-            r.features = r.gated ? nil : hand.flatMap(classifier.features)
+            r.features = r.gated ? nil : features
             if primeAfterSwipe, let f = r.features {
                 // The pose the hand settles into after a swipe is part of the swipe, not a new intent.
                 stabilizer.prime(f.gesture)
