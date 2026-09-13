@@ -15,6 +15,7 @@ struct HandFeatures {
     var tipReach: CGFloat        // farthest fingertip from the wrist, in palm lengths
     var thumbStraight, thumbClear, thumbUp: Bool
     var extent: CGFloat          // landmark bounding-box diagonal, fraction of frame
+    var palm: CGFloat            // wrist → middle MCP, fraction of frame; the unit every finger test is normalized by
     var span: CGFloat            // knuckle width (index MCP → little MCP) in palm lengths; see `maxPalmSpan`
     var tooSmall: Bool           // pose rejected because the hand is too far away
     var angled: Bool             // pose rejected because the palm does not face the camera
@@ -93,7 +94,7 @@ struct GestureClassifier {
                              curled: curl.filter { $0 }.count, tipReach: tipReach,
                              thumbStraight: thumbStraight, thumbClear: thumbClear,
                              thumbUp: thumbTip.y > indexMCP.y + 0.3 * size,
-                             extent: hand.extent, span: dist(indexMCP, littleMCP) / size,
+                             extent: hand.extent, palm: size, span: dist(indexMCP, littleMCP) / size,
                              tooSmall: false, angled: false)
         let n = f.extendedCount
         // Open palm ignores the thumb: a relaxed palm keeps it alongside the index (measured

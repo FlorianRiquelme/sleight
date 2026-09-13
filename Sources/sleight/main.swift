@@ -38,9 +38,9 @@ if let alt = flagValue("--config") {
     }
 }
 
-// sleight replay <file.jsonl> [--config other.json] [-v]
+// sleight replay <file.jsonl> [--config other.json] [-v | --csv]
 if args.count > 2, args[1] == "replay" {
-    exit(try Replay.run(file: URL(fileURLWithPath: args[2]), config: config, verbose: verbose))
+    exit(try Replay.run(file: URL(fileURLWithPath: args[2]), config: config, verbose: verbose, csv: args.contains("--csv")))
 }
 
 if let name = flagValue("--fire") {

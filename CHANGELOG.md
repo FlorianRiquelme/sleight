@@ -22,6 +22,8 @@ first within a section.
 - A far, curled hand no longer counts as a fist: closed poses have their own extent floor.
 
 ### Changed
+- `replay --csv` prints one row per frame of the current pipeline's derived state for offline
+  measurement across fixtures; `replay -v` and the CSV include the palm length.
 - `minOpenExtent` default 0.28 → 0.30; new config key `minClosedExtent` (0.16) for fist and thumbs up.
 - `replay -v` and the HUD show the curled-finger count and fingertip reach; `TOO SMALL` names both floors.
 

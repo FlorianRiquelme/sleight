@@ -53,6 +53,9 @@ final class Pipeline {
 
     var holdFrames: Int { stabilizer.holdFrames }
 
+    /// Classifier output for a hand regardless of gating; `Result.features` is nil while gated.
+    func features(_ hand: Hand) -> HandFeatures? { classifier.features(hand) }
+
     func process(_ hand: Hand?, at t: TimeInterval) -> Result {
         // Swipe samples are kept across dropouts on purpose; they age out by time.
         handVisible = hand != nil

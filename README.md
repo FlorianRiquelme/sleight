@@ -42,7 +42,7 @@ swift build
 .build/debug/sleight --camera iphone # pick camera by name substring
 .build/debug/sleight --fire fist     # run one mapping once (test actions)
 .build/debug/sleight --record out.jsonl --label fist   # record landmarks while you perform a gesture
-.build/debug/sleight replay out.jsonl [-v] [--config other.json]   # re-run a recording offline
+.build/debug/sleight replay out.jsonl [-v | --csv] [--config other.json]   # re-run a recording offline
 ./scripts/bundle.sh                     # build/sleight.app
 ./scripts/start.sh                      # rebuild the .app and relaunch it; --dev runs a debug build in the foreground
 ./scripts/record-fixtures.sh            # guided, timed recording of the one-step-back fixtures (issue #2)
@@ -84,7 +84,9 @@ every fire. It marks fires that differ from what happened at record time, so you
 threshold and see exactly which misfires disappear or appear. With `--label <gesture>` set at record
 time (`none` for "nothing should fire"), replay also reports correct vs. wrong fires and exits non-zero if any are wrong, which makes a
 labeled recording usable as a regression test. `-v` prints every frame's finger flags, hold progress,
-and speed. `--config` replays against a different config file without touching the live one.
+palm length and speed. `--csv` prints one row per frame of what the current pipeline derives (pose,
+gating, speed, palm length, extent, span, hold, fire) and nothing else, for measuring across
+fixtures offline. `--config` replays against a different config file without touching the live one.
 
 ## Config
 

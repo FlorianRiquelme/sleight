@@ -16,6 +16,10 @@ the result.
 - **Pipeline behaviour** — `swift test`, then `scripts/replay-all.sh` against the fixtures in
   `recordings/`. A misfire fix is done when the offending recording replays clean *and* every other
   fixture still passes.
+- **A threshold question across fixtures** ("does unit X separate a wind-up from a hold?") —
+  `replay <file> --csv` per fixture and measure on that. The CSV is the current pipeline's
+  per-frame output; the `d` fields inside a recording are record-time state and go stale.
+  Never re-implement pipeline math offline to answer such a question.
 - **Live detection** — `timeout 10 .build/debug/sleight --no-ui --dry-run -v`. Expect the
   camera line, `hand in frame`, and an fps line near 25–30. Silence after the camera line means
   frames are not arriving.
