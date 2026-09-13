@@ -48,10 +48,12 @@ struct GestureClassifier {
 
 /// Emits a gesture only after it has been seen for `holdFrames` consecutive frames.
 struct GestureStabilizer {
-    var holdFrames = 6
+    let holdFrames: Int
     private var candidate: Gesture?
     private var count = 0
     private(set) var current: Gesture?
+
+    init(holdFrames: Int = 6) { self.holdFrames = holdFrames }
 
     /// Returns the newly stabilized gesture on the frame it becomes stable, else nil.
     mutating func push(_ g: Gesture?) -> Gesture? {
