@@ -4,14 +4,14 @@ Goal: turn "it sometimes triggers when I rest my hand" into a committed fixture 
 
 1. **Capture it.** The human records the offending motion with the intended gesture as label:
    ```sh
-   .build/debug/gesturecam --no-ui --dry-run --record recordings/thumbsUp-resting-hand.jsonl --label thumbsUp
+   .build/debug/sleight --no-ui --dry-run --record recordings/thumbsUp-resting-hand.jsonl --label thumbsUp
    ```
    Ctrl-C after a few repetitions. For a false positive with no intended gesture, use `--label none`.
    → done when the file has a header line and a few hundred frames (`wc -l`).
 
 2. **Reproduce offline.**
    ```sh
-   .build/debug/gesturecam replay recordings/<file>.jsonl
+   .build/debug/sleight replay recordings/<file>.jsonl
    ```
    → done when the replay shows the same wrong fire the human saw. If it does not, the problem is
    upstream of `Pipeline` (camera, Vision, permissions) and replay cannot help; go to the live
@@ -37,6 +37,6 @@ Goal: turn "it sometimes triggers when I rest my hand" into a committed fixture 
 
 - `scripts/debug-screenshot.sh out.png` — screenshot the live debug window (launches the app with
   `--debug --dry-run` if no window is open). Read the PNG to see skeleton colors and the HUD.
-- A synthetic hand for unit tests lives in `Tests/gesturecamTests/PipelineTests.swift`
+- A synthetic hand for unit tests lives in `Tests/sleightTests/PipelineTests.swift`
   (`hand(index:middle:ring:little:thumbOut:thumbUp:offset:)`). Extend it before reaching for a
   recording when the question is about a rule, not about real landmark noise.

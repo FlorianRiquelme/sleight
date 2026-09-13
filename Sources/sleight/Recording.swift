@@ -63,7 +63,7 @@ final class Recorder {
     private let encoder = JSONEncoder()
     private let start: TimeInterval
     private(set) var frameCount = 0
-    private let queue = DispatchQueue(label: "gesturecam.recorder")
+    private let queue = DispatchQueue(label: "sleight.recorder")
 
     init(url: URL, camera: String, label: String?, config: Config, start: TimeInterval) throws {
         self.url = url

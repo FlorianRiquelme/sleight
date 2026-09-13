@@ -3,7 +3,7 @@
 set -uo pipefail
 cd "$(dirname "$0")/.."
 swift build 2>&1 | grep -E "error" && exit 1
-BIN=.build/debug/gesturecam
+BIN=.build/debug/sleight
 fail=0; n=0
 for f in recordings/*.jsonl(N); do
   n=$((n+1))

@@ -1,5 +1,5 @@
 import XCTest
-@testable import gesturecam
+@testable import sleight
 
 final class SwipeDetectorTests: XCTestCase {
     /// Feeds a straight-line motion at 30fps; returns the first gesture emitted.

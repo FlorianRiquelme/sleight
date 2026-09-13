@@ -57,7 +57,7 @@ struct Config: Codable {
     var mappings: [String: Action]
 
     static let path = FileManager.default.homeDirectoryForCurrentUser
-        .appendingPathComponent(".config/gesturecam/config.json")
+        .appendingPathComponent(".config/sleight/config.json")
 
     static let `default` = Config(
         camera: nil,
@@ -71,7 +71,7 @@ struct Config: Codable {
             Gesture.openPalm.rawValue: .spotify("playpause"),
             Gesture.fist.rawValue: .media("mute"),
             Gesture.twoFingers.rawValue: .spotify("next"),
-            Gesture.thumbsUp.rawValue: .shell("osascript -e 'display notification \"👍\" with title \"gesturecam\"'"),
+            Gesture.thumbsUp.rawValue: .shell("osascript -e 'display notification \"👍\" with title \"sleight\"'"),
             // Natural direction: content follows the hand. Swipe left → space on the right.
             Gesture.swipeLeft.rawValue: .key("ctrl+right"),
             Gesture.swipeRight.rawValue: .key("ctrl+left"),

@@ -10,7 +10,7 @@ final class DebugWindowController: NSWindowController, NSWindowDelegate {
         self.engine = engine
         let w = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 800, height: 600),
                          styleMask: [.titled, .closable, .resizable, .miniaturizable], backing: .buffered, defer: false)
-        w.title = "gesturecam debug"
+        w.title = "sleight debug"
         w.contentAspectRatio = NSSize(width: 4, height: 3)
         w.contentView = view
         w.isReleasedWhenClosed = false

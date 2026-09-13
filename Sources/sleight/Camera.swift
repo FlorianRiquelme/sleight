@@ -4,7 +4,7 @@ import AVFoundation
 final class Camera: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate {
     let session = AVCaptureSession()
     let device: AVCaptureDevice
-    private let queue = DispatchQueue(label: "gesturecam.camera")
+    private let queue = DispatchQueue(label: "sleight.camera")
     var onFrame: ((CMSampleBuffer) -> Void)?
 
     static func devices() -> [AVCaptureDevice] {

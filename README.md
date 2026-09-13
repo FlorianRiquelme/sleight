@@ -1,6 +1,7 @@
-# gesturecam
+# Sleight
 
-Menu bar app that watches your webcam for hand gestures and fires shortcuts.
+Sleight of hand for your Mac. A menu bar app that watches your webcam for hand gestures and
+fires shortcuts: wave a palm to pause Spotify, swipe to switch Spaces, fist to mute.
 On-device only (Apple Vision), no frames stored or sent anywhere.
 
 ## Gestures
@@ -31,16 +32,16 @@ foreshortened, a hand raised to gesture is not.
 
 ```sh
 swift build
-.build/debug/gesturecam                 # menu bar app
-.build/debug/gesturecam --no-ui -v      # headless, verbose logging for tuning
-.build/debug/gesturecam --dry-run       # detect but don't fire actions
-.build/debug/gesturecam --debug         # open the debug window at launch
-.build/debug/gesturecam --list          # cameras
-.build/debug/gesturecam --camera iphone # pick camera by name substring
-.build/debug/gesturecam --fire fist     # run one mapping once (test actions)
-.build/debug/gesturecam --record out.jsonl --label fist   # record landmarks while you perform a gesture
-.build/debug/gesturecam replay out.jsonl [-v] [--config other.json]   # re-run a recording offline
-./scripts/bundle.sh                     # build/gesturecam.app
+.build/debug/sleight                 # menu bar app
+.build/debug/sleight --no-ui -v      # headless, verbose logging for tuning
+.build/debug/sleight --dry-run       # detect but don't fire actions
+.build/debug/sleight --debug         # open the debug window at launch
+.build/debug/sleight --list          # cameras
+.build/debug/sleight --camera iphone # pick camera by name substring
+.build/debug/sleight --fire fist     # run one mapping once (test actions)
+.build/debug/sleight --record out.jsonl --label fist   # record landmarks while you perform a gesture
+.build/debug/sleight replay out.jsonl [-v] [--config other.json]   # re-run a recording offline
+./scripts/bundle.sh                     # build/sleight.app
 swift test                              # swipe detector tests
 ```
 
@@ -62,7 +63,7 @@ Frame conversion for the preview only runs while the window is open.
 A recording is a `.jsonl` file: a header with the camera and config, then one line per frame
 with the hand landmarks Vision produced and what the pipeline derived at the time (pose, gating,
 speed, hold count, fired gesture). No images. Start one with `--record <file>` and stop with Ctrl-C,
-or use "Start Recording" in the menu, which writes to `~/.config/gesturecam/recordings/`.
+or use "Start Recording" in the menu, which writes to `~/.config/sleight/recordings/`.
 
 `replay <file>` runs the recorded landmarks through the current classifier and config and lists
 every fire. It marks fires that differ from what happened at record time, so you can change a
@@ -73,7 +74,7 @@ and speed. `--config` replays against a different config file without touching t
 
 ## Config
 
-`~/.config/gesturecam/config.json` is written with defaults on first run.
+`~/.config/sleight/config.json` is written with defaults on first run.
 
 ```json
 {
@@ -102,4 +103,4 @@ Action types:
 Gestures missing from `mappings` get their defaults.
 
 Use "Reload Config" from the menu after editing. Classifier thresholds live in
-`Sources/gesturecam/GestureClassifier.swift`.
+`Sources/sleight/GestureClassifier.swift`.

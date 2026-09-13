@@ -15,8 +15,8 @@ first within a section.
 - `spotify` action type via Apple Events; open palm and two fingers default to it.
 - `none` action type to disable a gesture; gestures missing from `mappings` fall back to defaults.
 - Menu bar app with enable toggle, camera picker, config edit/reload. `scripts/bundle.sh` builds
-  `gesturecam.app`.
-- JSON config at `~/.config/gesturecam/config.json` with `media`, `key`, `shell` actions.
+  `sleight.app`.
+- JSON config at `~/.config/sleight/config.json` with `media`, `key`, `shell` actions.
 - Static gestures open palm, fist, two fingers, thumbs up on Vision hand landmarks.
 
 ### Fixed

@@ -2,17 +2,17 @@
 import PackageDescription
 
 let package = Package(
-    name: "gesturecam",
+    name: "sleight",
     platforms: [.macOS(.v14)],
     targets: [
         .executableTarget(
-            name: "gesturecam",
-            path: "Sources/gesturecam",
+            name: "sleight",
+            path: "Sources/sleight",
             exclude: ["Info.plist"],
             linkerSettings: [
-                .unsafeFlags(["-Xlinker", "-sectcreate", "-Xlinker", "__TEXT", "-Xlinker", "__info_plist", "-Xlinker", "Sources/gesturecam/Info.plist"])
+                .unsafeFlags(["-Xlinker", "-sectcreate", "-Xlinker", "__TEXT", "-Xlinker", "__info_plist", "-Xlinker", "Sources/sleight/Info.plist"])
             ]
         ),
-        .testTarget(name: "gesturecamTests", dependencies: ["gesturecam"], path: "Tests/gesturecamTests")
+        .testTarget(name: "sleightTests", dependencies: ["sleight"], path: "Tests/sleightTests")
     ]
 )

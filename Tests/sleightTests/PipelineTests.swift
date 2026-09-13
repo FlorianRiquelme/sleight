@@ -1,6 +1,6 @@
 import XCTest
 import Vision
-@testable import gesturecam
+@testable import sleight
 
 final class PipelineTests: XCTestCase {
     /// Synthetic upright right hand. `curl` per finger folds the tip back toward the wrist.
@@ -12,10 +12,10 @@ final class PipelineTests: XCTestCase {
     }
 
     private func rawHand(index: Bool, middle: Bool, ring: Bool, little: Bool, thumbOut: Bool, thumbUp: Bool, offset: CGFloat) -> Hand {
-        var p: [gesturecam.Joint: CGPoint] = [:]
+        var p: [sleight.Joint: CGPoint] = [:]
         let wrist = CGPoint(x: 0.5 + offset, y: 0.3)
         p[.wrist] = wrist
-        let fingers: [(gesturecam.Joint, gesturecam.Joint, gesturecam.Joint, gesturecam.Joint, CGFloat, Bool)] = [
+        let fingers: [(sleight.Joint, sleight.Joint, sleight.Joint, sleight.Joint, CGFloat, Bool)] = [
             (.indexMCP, .indexPIP, .indexDIP, .indexTip, -0.06, index),
             (.middleMCP, .middlePIP, .middleDIP, .middleTip, -0.02, middle),
             (.ringMCP, .ringPIP, .ringDIP, .ringTip, 0.02, ring),
@@ -135,7 +135,7 @@ final class PipelineTests: XCTestCase {
     }
 
     func testRecordingRoundTrip() throws {
-        let dir = FileManager.default.temporaryDirectory.appendingPathComponent("gesturecam-test-\(UUID().uuidString)")
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent("sleight-test-\(UUID().uuidString)")
         let url = dir.appendingPathComponent("rec.jsonl")
         let rec = try Recorder(url: url, camera: "test", label: "fist", config: config, start: 100)
         let fist = hand(index: false, middle: false, ring: false, little: false, thumbOut: false)

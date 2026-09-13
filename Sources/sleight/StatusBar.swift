@@ -21,7 +21,7 @@ final class StatusBarController: NSObject {
         self.device = device
         super.init()
 
-        item.button?.image = NSImage(systemSymbolName: "hand.raised.fill", accessibilityDescription: "gesturecam")
+        item.button?.image = NSImage(systemSymbolName: "hand.raised.fill", accessibilityDescription: "sleight")
         item.button?.imagePosition = .imageLeading
 
         let menu = NSMenu()
@@ -43,7 +43,7 @@ final class StatusBarController: NSObject {
         menu.addItem(withTitle: "Edit Config…", action: #selector(editConfig), keyEquivalent: ",").target = self
         menu.addItem(withTitle: "Reload Config", action: #selector(reloadConfig), keyEquivalent: "r").target = self
         menu.addItem(.separator())
-        menu.addItem(withTitle: "Quit gesturecam", action: #selector(quit), keyEquivalent: "q").target = self
+        menu.addItem(withTitle: "Quit sleight", action: #selector(quit), keyEquivalent: "q").target = self
         item.menu = menu
 
         engine.onHand = { [weak self] visible in

@@ -1,4 +1,4 @@
-# gesturecam — agent notes
+# Sleight — agent notes
 
 macOS menu bar app: webcam → Vision hand landmarks → gestures → shortcuts. Swift package, no
 dependencies. Commands and config schema live in `README.md`; this file holds what the code and
@@ -16,7 +16,7 @@ the result.
 - **Pipeline behaviour** — `swift test`, then `scripts/replay-all.sh` against the fixtures in
   `recordings/`. A misfire fix is done when the offending recording replays clean *and* every other
   fixture still passes.
-- **Live detection** — `timeout 10 .build/debug/gesturecam --no-ui --dry-run -v`. Expect the
+- **Live detection** — `timeout 10 .build/debug/sleight --no-ui --dry-run -v`. Expect the
   camera line, `hand in frame`, and an fps line near 25–30. Silence after the camera line means
   frames are not arriving.
 - **UI renders** — `scripts/debug-screenshot.sh out.png` captures the debug window; Read the PNG.
@@ -28,12 +28,12 @@ the result.
   returns, the session stops, and you get the camera line with no frames ever.
 - Vision coordinates: origin bottom-left, normalized 0–1, **not mirrored**. The user's right is
   image-left, so user-rightward motion has negative dx. The debug view mirrors for display only.
-- Tests that `import Vision` alongside `@testable import gesturecam` must write
-  `gesturecam.Joint`; bare `Joint` is ambiguous.
+- Tests that `import Vision` alongside `@testable import sleight` must write
+  `sleight.Joint`; bare `Joint` is ambiguous.
 - The executable embeds `Info.plist` via `-sectcreate` so the camera prompt works unbundled. Keep
   `exclude: ["Info.plist"]` in `Package.swift` or SwiftPM warns on every build.
 - Permissions attach to the responsible process. Run from a terminal and the terminal owns them;
-  run `build/gesturecam.app` and the app owns them. Missing Accessibility swallows key events
+  run `build/sleight.app` and the app owns them. Missing Accessibility swallows key events
   silently; `ensureAccessibility()` prompts once.
 - Tests derive frame counts from `config.holdFrames`; a hardcoded `for i in 0..<10` silently stops
   firing when the default hold changes.
@@ -42,8 +42,8 @@ the result.
 
 ## Where things live
 
-- All gesture thresholds: `Sources/gesturecam/GestureClassifier.swift` (static) and
-  `Sources/gesturecam/Swipe.swift` (motion). Nowhere else.
+- All gesture thresholds: `Sources/sleight/GestureClassifier.swift` (static) and
+  `Sources/sleight/Swipe.swift` (motion). Nowhere else.
 - `Pipeline` is camera-free and driven by frame timestamps, which is what makes replay
   deterministic. Anything that needs wall-clock time belongs in `Engine`, not `Pipeline`.
 - `Engine` owns the camera, Vision, recording, and debug output. `StatusBar` and `DebugWindow`

@@ -38,7 +38,7 @@ if let alt = flagValue("--config") {
     }
 }
 
-// gesturecam replay <file.jsonl> [--config other.json] [-v]
+// sleight replay <file.jsonl> [--config other.json] [-v]
 if args.count > 2, args[1] == "replay" {
     exit(try Replay.run(file: URL(fileURLWithPath: args[2]), config: config, verbose: verbose))
 }
