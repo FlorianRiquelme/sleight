@@ -53,6 +53,7 @@ struct Config: Codable {
     var swipeMinDistance: Double
     var swipeWindowSeconds: Double
     var stillSpeed: Double          // static gestures only fire below this palm speed (frame widths/s)
+    var minOpenExtent: Double       // open palm / two fingers need this landmark extent (fraction of frame)
     var mappings: [String: Action]
 
     static let path = FileManager.default.homeDirectoryForCurrentUser
@@ -60,11 +61,12 @@ struct Config: Codable {
 
     static let `default` = Config(
         camera: nil,
-        holdFrames: 8,
+        holdFrames: 15,      // ~0.5s: a swipe wind-up pauses ~12 frames with an open hand
         cooldownSeconds: 1.0,
         swipeMinDistance: 0.25,
         swipeWindowSeconds: 0.5,
         stillSpeed: 0.4,
+        minOpenExtent: 0.28,
         mappings: [
             Gesture.openPalm.rawValue: .spotify("playpause"),
             Gesture.fist.rawValue: .media("mute"),
@@ -76,12 +78,12 @@ struct Config: Codable {
         ]
     )
 
-    private enum K: String, CodingKey { case camera, holdFrames, cooldownSeconds, swipeMinDistance, swipeWindowSeconds, stillSpeed, mappings }
+    private enum K: String, CodingKey { case camera, holdFrames, cooldownSeconds, swipeMinDistance, swipeWindowSeconds, stillSpeed, minOpenExtent, mappings }
 
-    init(camera: String?, holdFrames: Int, cooldownSeconds: Double, swipeMinDistance: Double, swipeWindowSeconds: Double, stillSpeed: Double, mappings: [String: Action]) {
+    init(camera: String?, holdFrames: Int, cooldownSeconds: Double, swipeMinDistance: Double, swipeWindowSeconds: Double, stillSpeed: Double, minOpenExtent: Double, mappings: [String: Action]) {
         self.camera = camera; self.holdFrames = holdFrames; self.cooldownSeconds = cooldownSeconds
         self.swipeMinDistance = swipeMinDistance; self.swipeWindowSeconds = swipeWindowSeconds
-        self.stillSpeed = stillSpeed; self.mappings = mappings
+        self.stillSpeed = stillSpeed; self.minOpenExtent = minOpenExtent; self.mappings = mappings
     }
 
     init(from d: Decoder) throws {
@@ -93,6 +95,7 @@ struct Config: Codable {
         swipeMinDistance = try c.decodeIfPresent(Double.self, forKey: .swipeMinDistance) ?? def.swipeMinDistance
         swipeWindowSeconds = try c.decodeIfPresent(Double.self, forKey: .swipeWindowSeconds) ?? def.swipeWindowSeconds
         stillSpeed = try c.decodeIfPresent(Double.self, forKey: .stillSpeed) ?? def.stillSpeed
+        minOpenExtent = try c.decodeIfPresent(Double.self, forKey: .minOpenExtent) ?? def.minOpenExtent
         // Gestures missing from the file get their default; map to {"type":"none"} to disable one.
         mappings = def.mappings.merging(try c.decodeIfPresent([String: Action].self, forKey: .mappings) ?? [:]) { $1 }
     }

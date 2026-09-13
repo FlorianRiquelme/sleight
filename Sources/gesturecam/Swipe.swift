@@ -2,10 +2,12 @@ import Foundation
 
 /// Detects fast horizontal palm motion. Directions are in the user's frame
 /// (camera frames are not mirrored, so user-right is image-left).
+/// Samples age out by time only: Vision drops the hand for a few frames during brisk motion,
+/// and resetting on each dropout is why swipes never accumulated distance.
 struct SwipeDetector {
     var minDistance: CGFloat = 0.25      // fraction of frame width
     var window: TimeInterval = 0.5       // seconds the motion may take
-    var maxVerticalRatio: CGFloat = 0.6  // |dy| must stay below this * |dx|
+    var maxVerticalRatio: CGFloat = 0.7  // |dy| must stay below this * |dx|; fixtures show real swipes arc up to ~0.5
 
     private var samples: [(t: TimeInterval, p: CGPoint)] = []
     private var suppressUntil: TimeInterval = 0

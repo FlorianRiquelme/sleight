@@ -11,6 +11,14 @@ struct Hand {
 
     subscript(_ j: Joint) -> CGPoint? { points[j] }
 
+    /// Bounding-box diagonal of all landmarks, as a fraction of the frame. Grows as the hand
+    /// approaches the camera and shrinks when it is foreshortened (e.g. lying flat on a desk).
+    var extent: CGFloat {
+        guard points.count >= 5 else { return 0 }
+        let xs = points.values.map(\.x), ys = points.values.map(\.y)
+        return hypot(xs.max()! - xs.min()!, ys.max()! - ys.min()!)
+    }
+
     /// Stable reference point for motion tracking.
     var palmCenter: CGPoint? {
         let pts = [Joint.wrist, .indexMCP, .middleMCP, .ringMCP, .littleMCP].compactMap { points[$0] }

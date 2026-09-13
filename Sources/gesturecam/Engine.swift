@@ -13,6 +13,7 @@ struct DebugFrame {
     let trail: [CGPoint]          // recent palm centers (oldest first)
     let swipeMinDistance: CGFloat
     let stillSpeed: CGFloat
+    let minOpenExtent: CGFloat
     let candidate: Gesture?
     let holdCount: Int
     let holdFrames: Int
@@ -87,7 +88,7 @@ final class Engine {
             onDebug(DebugFrame(
                 image: cg, hand: hand, features: r.features, gated: r.gated, speed: r.speed,
                 trail: r.trail, swipeMinDistance: CGFloat(config.swipeMinDistance),
-                stillSpeed: CGFloat(config.stillSpeed),
+                stillSpeed: CGFloat(config.stillSpeed), minOpenExtent: CGFloat(config.minOpenExtent),
                 candidate: r.candidate, holdCount: r.holdCount, holdFrames: pipeline.holdFrames,
                 fps: lastFPS, lastFired: lastFired))
         }

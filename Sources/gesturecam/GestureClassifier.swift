@@ -10,6 +10,8 @@ enum Gesture: String, CaseIterable {
 struct HandFeatures {
     var index, middle, ring, little: Bool
     var thumbStraight, thumbClear, thumbUp: Bool
+    var extent: CGFloat          // landmark bounding-box diagonal, fraction of frame
+    var tooSmall: Bool           // open-hand pose rejected because the hand is too far/foreshortened
     var thumb: Bool { thumbStraight && thumbClear }
     var extendedCount: Int { [index, middle, ring, little].filter { $0 }.count }
     var gesture: Gesture?
@@ -18,6 +20,11 @@ struct HandFeatures {
 /// Rule-based static pose classifier on Vision hand landmarks.
 /// All distances are normalized by hand size (wrist → middle MCP) for scale invariance.
 struct GestureClassifier {
+    /// Open-finger poses (open palm, two fingers) need at least this hand extent. A hand resting on
+    /// the desk is farther from the camera and foreshortened: fixtures show desk-life hands top out
+    /// at 0.26 while deliberate open palms start at 0.31.
+    var minOpenExtent: CGFloat = 0.28
+
     func classify(_ hand: Hand) -> Gesture? { features(hand)?.gesture }
 
     func features(_ hand: Hand) -> HandFeatures? {
@@ -43,7 +50,8 @@ struct GestureClassifier {
         let thumbClear = dist(thumbTip, indexMCP) / size > 0.6
         var f = HandFeatures(index: index, middle: middle, ring: ring, little: little,
                              thumbStraight: thumbStraight, thumbClear: thumbClear,
-                             thumbUp: thumbTip.y > indexMCP.y + 0.3 * size)
+                             thumbUp: thumbTip.y > indexMCP.y + 0.3 * size,
+                             extent: hand.extent, tooSmall: false)
         let n = f.extendedCount
         // Open palm ignores the thumb: a relaxed palm keeps it alongside the index (measured
         // 0.26–0.47 hand-widths from the index MCP, same range as a fist), so it carries no signal.
@@ -51,6 +59,11 @@ struct GestureClassifier {
         else if n == 0 && !f.thumb { f.gesture = .fist }
         else if index && middle && !ring && !little { f.gesture = .twoFingers }
         else if n == 0 && f.thumb && f.thumbUp { f.gesture = .thumbsUp }
+
+        if f.gesture == .openPalm || f.gesture == .twoFingers, f.extent < minOpenExtent {
+            f.tooSmall = true
+            f.gesture = nil
+        }
         return f
     }
 
@@ -67,6 +80,11 @@ struct GestureStabilizer {
     private(set) var current: Gesture?
 
     init(holdFrames: Int = 6) { self.holdFrames = holdFrames }
+
+    /// Treat `g` as already fired: it will not fire again until the pose changes away from it.
+    mutating func prime(_ g: Gesture?) {
+        candidate = g; current = g; count = holdFrames
+    }
 
     /// Returns the newly stabilized gesture on the frame it becomes stable, else nil.
     mutating func push(_ g: Gesture?) -> Gesture? {

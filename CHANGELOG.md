@@ -20,6 +20,10 @@ first within a section.
 - Static gestures open palm, fist, two fingers, thumbs up on Vision hand landmarks.
 
 ### Fixed
+- Swipes never fired: Vision drops the hand mid-motion and the detector reset on every dropout.
+- Open palm fired for a hand resting flat on the desk; open-hand poses now need `minOpenExtent`.
+- Open palm fired during a swipe wind-up and its cooldown swallowed the swipe; default hold is
+  15 frames and the pose a hand settles into after a swipe no longer fires.
 - Open palm never fired for a relaxed hand with the thumb alongside the index; the thumb is no
   longer part of the open palm rule.
 

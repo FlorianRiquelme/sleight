@@ -35,6 +35,8 @@ the result.
 - Permissions attach to the responsible process. Run from a terminal and the terminal owns them;
   run `build/gesturecam.app` and the app owns them. Missing Accessibility swallows key events
   silently; `ensureAccessibility()` prompts once.
+- Tests derive frame counts from `config.holdFrames`; a hardcoded `for i in 0..<10` silently stops
+  firing when the default hold changes.
 - `swift-tools-version:5.9` on purpose: Swift 5 language mode keeps AppKit/AVFoundation callbacks
   free of strict-concurrency churn.
 

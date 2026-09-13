@@ -4,7 +4,14 @@ import Vision
 
 final class PipelineTests: XCTestCase {
     /// Synthetic upright right hand. `curl` per finger folds the tip back toward the wrist.
-    private func hand(index: Bool, middle: Bool, ring: Bool, little: Bool, thumbOut: Bool, thumbUp: Bool = false, offset: CGFloat = 0) -> Hand {
+    private func hand(index: Bool, middle: Bool, ring: Bool, little: Bool, thumbOut: Bool, thumbUp: Bool = false, offset: CGFloat = 0, scale: CGFloat = 1) -> Hand {
+        let h = rawHand(index: index, middle: middle, ring: ring, little: little, thumbOut: thumbOut, thumbUp: thumbUp, offset: offset)
+        guard scale != 1, let w = h[.wrist] else { return h }
+        let pts = h.points.mapValues { CGPoint(x: w.x + ($0.x - w.x) * scale, y: w.y + ($0.y - w.y) * scale) }
+        return Hand(chirality: h.chirality, points: pts, confidence: h.confidence)
+    }
+
+    private func rawHand(index: Bool, middle: Bool, ring: Bool, little: Bool, thumbOut: Bool, thumbUp: Bool, offset: CGFloat) -> Hand {
         var p: [gesturecam.Joint: CGPoint] = [:]
         let wrist = CGPoint(x: 0.5 + offset, y: 0.3)
         p[.wrist] = wrist
@@ -47,6 +54,40 @@ final class PipelineTests: XCTestCase {
         XCTAssertEqual(c.classify(hand(index: false, middle: false, ring: false, little: false, thumbOut: true, thumbUp: true)), .thumbsUp)
     }
 
+    func testSmallOpenHandIsRejectedButFistIsNot() {
+        let c = GestureClassifier()
+        let palm = hand(index: true, middle: true, ring: true, little: true, thumbOut: true)
+        XCTAssertGreaterThan(palm.extent, c.minOpenExtent, "synthetic palm must be large enough to count")
+        XCTAssertEqual(c.classify(palm), .openPalm)
+        let far = hand(index: true, middle: true, ring: true, little: true, thumbOut: true, scale: 0.5)
+        XCTAssertNil(c.classify(far))
+        XCTAssertEqual(c.features(far)?.tooSmall, true)
+        let farFist = hand(index: false, middle: false, ring: false, little: false, thumbOut: false, scale: 0.5)
+        XCTAssertEqual(c.classify(farFist), .fist, "closed poses are not extent-gated")
+    }
+
+    func testOpenHandLingeringAfterSwipeDoesNotFire() {
+        let p = Pipeline(config: config)
+        var fired: [Gesture] = []
+        for i in 0..<12 {
+            let h = hand(index: true, middle: true, ring: true, little: true, thumbOut: true, offset: CGFloat(i) * 0.03)
+            if let g = p.process(h, at: Double(i) / 30).fired { fired.append(g) }
+        }
+        XCTAssertEqual(fired, [.swipeLeft])
+        // Hand stays open and still for 3s after the swipe: no openPalm.
+        let rest = hand(index: true, middle: true, ring: true, little: true, thumbOut: true, offset: 0.33)
+        for i in 12..<100 {
+            if let g = p.process(rest, at: Double(i) / 30).fired { fired.append(g) }
+        }
+        XCTAssertEqual(fired, [.swipeLeft])
+        // Closing to a fist is a new intent and fires.
+        let fist = hand(index: false, middle: false, ring: false, little: false, thumbOut: false, offset: 0.33)
+        for i in 100..<120 {
+            if let g = p.process(fist, at: Double(i) / 30).fired { fired.append(g) }
+        }
+        XCTAssertEqual(fired, [.swipeLeft, .fist])
+    }
+
     func testStillFistFiresOnceAfterHold() {
         let p = Pipeline(config: config)
         let fist = hand(index: false, middle: false, ring: false, little: false, thumbOut: false)
@@ -78,16 +119,17 @@ final class PipelineTests: XCTestCase {
         let fist = hand(index: false, middle: false, ring: false, little: false, thumbOut: false)
         let palm = hand(index: true, middle: true, ring: true, little: true, thumbOut: true)
         var fired: [Gesture] = []
-        // 10 frames fist, 10 frames palm, all within 0.7s → palm is inside cooldown.
-        for i in 0..<20 {
-            if let g = p.process(i < 10 ? fist : palm, at: Double(i) / 30).fired { fired.append(g) }
+        let n = config.holdFrames + 2
+        // n frames fist then n frames palm at 30fps (~1.1s total) → palm lands inside the 1s cooldown.
+        for i in 0..<(2 * n) {
+            if let g = p.process(i < n ? fist : palm, at: Double(i) / 30).fired { fired.append(g) }
         }
         XCTAssertEqual(fired, [.fist])
-        // Same sequence spread over 4s → both fire.
+        // Same sequence at 5fps (~6.8s total) → both fire.
         let p2 = Pipeline(config: config)
         fired = []
-        for i in 0..<20 {
-            if let g = p2.process(i < 10 ? fist : palm, at: Double(i) * 0.2).fired { fired.append(g) }
+        for i in 0..<(2 * n) {
+            if let g = p2.process(i < n ? fist : palm, at: Double(i) * 0.2).fired { fired.append(g) }
         }
         XCTAssertEqual(fired, [.fist, .openPalm])
     }
@@ -98,7 +140,8 @@ final class PipelineTests: XCTestCase {
         let rec = try Recorder(url: url, camera: "test", label: "fist", config: config, start: 100)
         let fist = hand(index: false, middle: false, ring: false, little: false, thumbOut: false)
         let p = Pipeline(config: config)
-        for i in 0..<10 {
+        let n = config.holdFrames + 2
+        for i in 0..<n {
             let t = 100 + Double(i) / 30
             rec.append(hand: fist, at: t, result: p.process(fist, at: t))
         }
@@ -108,17 +151,18 @@ final class PipelineTests: XCTestCase {
         let (header, frames) = try Recording.load(url)
         XCTAssertEqual(header?.label, "fist")
         XCTAssertEqual(header?.camera, "test")
-        XCTAssertEqual(frames.count, 11)
+        XCTAssertEqual(frames.count, n + 1)
         XCTAssertEqual(frames[0].t, 0, accuracy: 0.0001)
-        XCTAssertNil(frames[10].hand)
-        XCTAssertEqual(frames[7].d.fired, "fist")
+        XCTAssertNil(frames[n].hand)
+        let fireIndex = config.holdFrames - 1
+        XCTAssertEqual(frames[fireIndex].d.fired, "fist")
 
         // Replaying the decoded hands reproduces the fire at the same frame.
         let p2 = Pipeline(config: config)
         let refired = frames.compactMap { f in p2.process(f.hand?.hand, at: f.t).fired.map { (f.t, $0) } }
         XCTAssertEqual(refired.count, 1)
         XCTAssertEqual(refired.first?.1, .fist)
-        XCTAssertEqual(refired.first?.0 ?? -1, frames[7].t, accuracy: 0.0001)
+        XCTAssertEqual(refired.first?.0 ?? -1, frames[fireIndex].t, accuracy: 0.0001)
         XCTAssertEqual(frames[3].hand?.hand.points.count, fist.points.count)
         try? FileManager.default.removeItem(at: dir)
     }

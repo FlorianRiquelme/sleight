@@ -14,14 +14,16 @@ final class Pipeline {
     }
 
     private(set) var config: Config
-    private let classifier = GestureClassifier()
+    private var classifier: GestureClassifier
     private var stabilizer: GestureStabilizer
     private var swipe: SwipeDetector
     private var lastFire: TimeInterval = -.infinity
+    private var primeAfterSwipe = false
     private(set) var handVisible = false
 
     init(config: Config) {
         self.config = config
+        classifier = GestureClassifier(minOpenExtent: CGFloat(config.minOpenExtent))
         stabilizer = GestureStabilizer(holdFrames: config.holdFrames)
         swipe = Pipeline.makeSwipe(config)
     }
@@ -39,19 +41,19 @@ final class Pipeline {
     }
 
     func reset() {
+        classifier = GestureClassifier(minOpenExtent: CGFloat(config.minOpenExtent))
         stabilizer = GestureStabilizer(holdFrames: config.holdFrames)
         swipe = Pipeline.makeSwipe(config)
         lastFire = -.infinity
+        primeAfterSwipe = false
         handVisible = false
     }
 
     var holdFrames: Int { stabilizer.holdFrames }
 
     func process(_ hand: Hand?, at t: TimeInterval) -> Result {
-        if (hand != nil) != handVisible {
-            handVisible = hand != nil
-            if !handVisible { swipe.reset() }
-        }
+        // Swipe samples are kept across dropouts on purpose; they age out by time.
+        handVisible = hand != nil
 
         var r = Result(fired: nil, features: nil, gated: false, speed: 0, trail: [], candidate: nil, holdCount: 0)
         var swiped = false
@@ -60,6 +62,7 @@ final class Pipeline {
                 _ = stabilizer.push(nil)
                 r.fired = fire(s, at: t)
                 swiped = true
+                primeAfterSwipe = true
             } else {
                 r.speed = swipe.recentSpeed(at: t)
                 r.gated = r.speed > CGFloat(config.stillSpeed)
@@ -68,7 +71,13 @@ final class Pipeline {
 
         if !swiped {
             r.features = r.gated ? nil : hand.flatMap(classifier.features)
-            if let g = stabilizer.push(r.features?.gesture) { r.fired = fire(g, at: t) }
+            if primeAfterSwipe, let f = r.features {
+                // The pose the hand settles into after a swipe is part of the swipe, not a new intent.
+                stabilizer.prime(f.gesture)
+                primeAfterSwipe = false
+            } else if let g = stabilizer.push(r.features?.gesture) {
+                r.fired = fire(g, at: t)
+            }
         } else {
             r.gated = true
         }

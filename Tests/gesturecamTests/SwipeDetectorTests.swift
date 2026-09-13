@@ -42,6 +42,16 @@ final class SwipeDetectorTests: XCTestCase {
         XCTAssertEqual(fired, [.swipeLeft])
     }
 
+    func testSwipeSurvivesDetectionDropouts() {
+        // Vision loses the hand for several frames mid-swipe; samples must persist across the gap.
+        var d = SwipeDetector()
+        var fired: Gesture?
+        for i in 0...9 where !(3...6).contains(i) {   // frames 3–6 missing
+            if let g = d.push(CGPoint(x: 0.3 + 0.04 * CGFloat(i), y: 0.5), at: TimeInterval(i) / 30) { fired = g }
+        }
+        XCTAssertEqual(fired, .swipeLeft)
+    }
+
     func testRecentSpeedReflectsMotion() {
         var d = SwipeDetector()
         for i in 0..<10 { _ = d.push(CGPoint(x: 0.5, y: 0.5), at: TimeInterval(i) / 30) }

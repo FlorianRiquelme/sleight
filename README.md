@@ -19,11 +19,13 @@ Swipe directions are in your frame of reference and follow the trackpad's
 if you prefer the opposite. Static gestures only fire while the hand is still,
 so an open palm mid-swipe doesn't also toggle playback.
 
-A static gesture fires once when held for `holdFrames` frames (~250ms), then needs a
+A static gesture fires once when held for `holdFrames` frames (~500ms), then needs a
 `cooldownSeconds` pause. Repeating the same gesture requires leaving the pose first.
 A swipe fires when the palm travels `swipeMinDistance` of the frame width within
 `swipeWindowSeconds`, mostly horizontally. `stillSpeed` is the palm speed above
-which static gestures are suppressed.
+which static gestures are suppressed. Open palm and two fingers also need the hand's landmark
+extent to reach `minOpenExtent` of the frame; a hand resting on the desk is smaller and
+foreshortened, a hand raised to gesture is not.
 
 ## Run
 
@@ -76,11 +78,12 @@ and speed. `--config` replays against a different config file without touching t
 ```json
 {
   "camera": "MacBook Pro Camera",
-  "holdFrames": 8,
+  "holdFrames": 15,
   "cooldownSeconds": 1,
   "swipeMinDistance": 0.25,
   "swipeWindowSeconds": 0.5,
   "stillSpeed": 0.4,
+  "minOpenExtent": 0.28,
   "mappings": {
     "openPalm":   { "type": "spotify", "command": "playpause" },
     "fist":       { "type": "key",   "keys": "cmd+shift+m" },

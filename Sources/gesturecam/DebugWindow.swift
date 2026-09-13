@@ -126,7 +126,7 @@ final class DebugView: NSView {
         } else if f.gated {
             lines.append("moving — static gestures gated")
         } else if let ft = f.features {
-            lines.append("pose:   \(ft.gesture?.rawValue ?? "—")")
+            lines.append(String(format: "pose:   %@   extent %.2f%@", ft.gesture?.rawValue ?? "—", ft.extent, ft.tooSmall ? "  TOO SMALL (min \(f.minOpenExtent))" : ""))
             lines.append("finger: I\(mark(ft.index)) M\(mark(ft.middle)) R\(mark(ft.ring)) L\(mark(ft.little))   thumb \(mark(ft.thumb)) (straight \(mark(ft.thumbStraight)) clear \(mark(ft.thumbClear)) up \(mark(ft.thumbUp)))")
         } else {
             lines.append("pose:   landmarks incomplete (\(f.hand!.points.count)/21)")

@@ -44,6 +44,30 @@ cross-checking gestures against each other.
 **Revisit if:** users perform static gestures while walking (speed floor too low), or swipes with
 a slow wind-up leak a static fire (raise `stillSpeed` or lengthen `holdFrames`).
 
+## 2026-09-13 Swipe samples survive Vision dropouts
+Brisk motion makes Vision lose the hand for 1–8 frames repeatedly; all eight fixture swipes
+crossed 0.43–0.58 of the frame yet none fired because the buffer reset on each dropout. Samples
+now age out by time only. Vertical tolerance raised to 0.7 (fixtures arc up to 0.5). One of eight
+attempts arcs at 0.97 and is deliberately not caught.
+**Revisit if:** a hand reappearing elsewhere within the 0.5s window causes phantom swipes.
+
+## 2026-09-13 Open-hand poses are gated on landmark extent (`minOpenExtent` 0.28)
+Desk-life fixture: a hand lying flat with fingers spread is geometrically an open palm and fired
+twice. Height in frame does not separate (deliberate gestures sit at the same y). Extent does:
+desk hands max 0.26, deliberate open palms min 0.31, two fingers 0.33. Closed poses are not gated
+(no false positives observed; fist extent is only 0.19). Extent is distance-dependent, so it is a
+config knob and shown in the HUD.
+**Revisit if:** a user gestures from farther back than ~arm's length, or a fist/thumbs-up false
+positive appears in a `none` fixture.
+
+## 2026-09-13 After a swipe, the settling pose is primed, not fired; hold is 15 frames
+The open hand that lingers after a swipe is part of the swipe. `GestureStabilizer.prime` marks it
+as already fired until the pose changes. Separately, a swipe wind-up pauses ~12 frames with an
+open hand, which fired open palm at the old 8-frame hold and its cooldown then swallowed the
+swipe; hold is now 15 (~0.5s). Deliberate holds in fixtures last ~2s.
+**Revisit if:** 0.5s feels sluggish for media control, in which case gate static fires on a
+longer stillness instead of a longer hold.
+
 ## 2026-09-13 Recordings are landmarks only, never frames
 JSONL of Vision output plus derived state replays deterministically through `Pipeline`, is small,
 and contains no imagery, so it can be committed and shared with an agent freely.
