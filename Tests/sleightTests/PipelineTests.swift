@@ -8,10 +8,12 @@ final class PipelineTests: XCTestCase {
     enum Closed { case curled, relaxed, hanging }
 
     /// Synthetic upright right hand. Non-extended fingers take the `closed` style.
-    private func hand(index: Bool, middle: Bool, ring: Bool, little: Bool, thumbOut: Bool, thumbUp: Bool = false, offset: CGFloat = 0, scale: CGFloat = 1, closed: Closed = .curled) -> Hand {
+    /// `scaleY` alone squashes the hand vertically: what a palm looks like when it is tilted
+    /// toward or away from the camera and its wrist-to-knuckle length foreshortens.
+    private func hand(index: Bool, middle: Bool, ring: Bool, little: Bool, thumbOut: Bool, thumbUp: Bool = false, offset: CGFloat = 0, scale: CGFloat = 1, scaleY: CGFloat = 1, closed: Closed = .curled) -> Hand {
         let h = rawHand(index: index, middle: middle, ring: ring, little: little, thumbOut: thumbOut, thumbUp: thumbUp, offset: offset, closed: closed)
-        guard scale != 1, let w = h[.wrist] else { return h }
-        let pts = h.points.mapValues { CGPoint(x: w.x + ($0.x - w.x) * scale, y: w.y + ($0.y - w.y) * scale) }
+        guard scale != 1 || scaleY != 1, let w = h[.wrist] else { return h }
+        let pts = h.points.mapValues { CGPoint(x: w.x + ($0.x - w.x) * scale, y: w.y + ($0.y - w.y) * scale * scaleY) }
         return Hand(chirality: h.chirality, points: pts, confidence: h.confidence)
     }
 
@@ -19,11 +21,13 @@ final class PipelineTests: XCTestCase {
         var p: [sleight.Joint: CGPoint] = [:]
         let wrist = CGPoint(x: 0.5 + offset, y: 0.3)
         p[.wrist] = wrist
+        // Knuckles 0.07 apart over a 0.15 palm: span 0.47, the middle of what Vision reports for
+        // a palm facing the camera (fixtures 0.37–0.58).
         let fingers: [(sleight.Joint, sleight.Joint, sleight.Joint, sleight.Joint, CGFloat, Bool)] = [
-            (.indexMCP, .indexPIP, .indexDIP, .indexTip, -0.06, index),
-            (.middleMCP, .middlePIP, .middleDIP, .middleTip, -0.02, middle),
-            (.ringMCP, .ringPIP, .ringDIP, .ringTip, 0.02, ring),
-            (.littleMCP, .littlePIP, .littleDIP, .littleTip, 0.06, little),
+            (.indexMCP, .indexPIP, .indexDIP, .indexTip, -0.035, index),
+            (.middleMCP, .middlePIP, .middleDIP, .middleTip, -0.012, middle),
+            (.ringMCP, .ringPIP, .ringDIP, .ringTip, 0.012, ring),
+            (.littleMCP, .littlePIP, .littleDIP, .littleTip, 0.035, little),
         ]
         for (mcp, pip, dip, tip, dx, ext) in fingers {
             let x = wrist.x + dx
@@ -72,16 +76,31 @@ final class PipelineTests: XCTestCase {
         let palm = hand(index: true, middle: true, ring: true, little: true, thumbOut: true)
         XCTAssertGreaterThan(palm.extent, c.minOpenExtent, "synthetic palm must be large enough to count")
         XCTAssertEqual(c.classify(palm), .openPalm)
-        let far = hand(index: true, middle: true, ring: true, little: true, thumbOut: true, scale: 0.5)
+        // One step back (fixtures: 0.6 of arm's-length extent) still counts; a hand at 0.4 does not.
+        XCTAssertEqual(c.classify(hand(index: true, middle: true, ring: true, little: true, thumbOut: true, scale: 0.6)), .openPalm)
+        let far = hand(index: true, middle: true, ring: true, little: true, thumbOut: true, scale: 0.4)
         XCTAssertNil(c.classify(far))
         XCTAssertEqual(c.features(far)?.tooSmall, true)
-        // A fist is compact, so its floor is lower: 0.8 scale still counts, 0.5 does not.
         let fist = hand(index: false, middle: false, ring: false, little: false, thumbOut: false)
-        XCTAssertLessThan(fist.extent, c.minOpenExtent, "a fist at gesture distance is smaller than an open palm")
-        XCTAssertEqual(c.classify(hand(index: false, middle: false, ring: false, little: false, thumbOut: false, scale: 0.8)), .fist)
-        let farFist = hand(index: false, middle: false, ring: false, little: false, thumbOut: false, scale: 0.5)
+        XCTAssertLessThan(fist.extent, palm.extent, "a fist is more compact than an open palm")
+        XCTAssertEqual(c.classify(hand(index: false, middle: false, ring: false, little: false, thumbOut: false, scale: 0.6)), .fist)
+        let farFist = hand(index: false, middle: false, ring: false, little: false, thumbOut: false, scale: 0.4)
         XCTAssertNil(c.classify(farFist))
         XCTAssertEqual(c.features(farFist)?.tooSmall, true)
+    }
+
+    func testAngledPalmsAreRejected() {
+        let c = GestureClassifier()
+        // Tilt the palm until its length foreshortens to 0.6: the knuckle span ratio passes 0.6
+        // and open palm, fist and two fingers are all refused, while a thumbs up (edge-on by
+        // nature) is not.
+        let tilted = hand(index: true, middle: true, ring: true, little: true, thumbOut: true, scaleY: 0.6)
+        XCTAssertGreaterThan(c.features(tilted)?.span ?? 0, GestureClassifier.maxPalmSpan)
+        XCTAssertNil(c.classify(tilted))
+        XCTAssertEqual(c.features(tilted)?.angled, true)
+        XCTAssertNil(c.classify(hand(index: false, middle: false, ring: false, little: false, thumbOut: false, scaleY: 0.6)))
+        XCTAssertNil(c.classify(hand(index: true, middle: true, ring: false, little: false, thumbOut: false, scaleY: 0.6)))
+        XCTAssertEqual(c.classify(hand(index: false, middle: false, ring: false, little: false, thumbOut: true, thumbUp: true, scaleY: 0.6)), .thumbsUp)
     }
 
     func testClosedPosesNeedCurledFingers() {

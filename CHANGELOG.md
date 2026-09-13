@@ -6,6 +6,11 @@ first within a section.
 ## Unreleased
 
 ### Fixed
+- Gestures work from one step back: the extent floors drop to what the far fixtures measure, and
+  open palm, fist and two fingers instead require the palm to face the camera (knuckle width over
+  palm length ≤ 0.6), which is what kept the idle fixture clean.
+- The hand coming back after a swipe no longer fires the opposite swipe: the opposite direction is
+  ignored for 1.5 s.
 - Stopping a recording with Ctrl-C no longer crashes on a frame that arrives while the file closes.
 - Hands resting on the mouse or keyboard no longer fire fist, thumbs up or two fingers: closed
   fingers must fold past their PIP, and a fist keeps its fingertips inside the palm.

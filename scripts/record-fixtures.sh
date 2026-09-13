@@ -26,7 +26,8 @@ take openPalm-far     openPalm   $HOLD "LEFT hand, one step back: open palm, fin
 take fist-far         fist       $HOLD "LEFT hand, one step back: fist"
 take twoFingers-far   twoFingers $HOLD "LEFT hand, one step back: index + middle up, others folded"
 take thumbsUp-far     thumbsUp   $HOLD "LEFT hand, one step back: thumbs up"
-take swipeLeft-far    swipeLeft  $SWIPE "LEFT hand, open, one step back: swipe toward YOUR LEFT, 3–4 times, return slowly"
-take swipeRight-far   swipeRight $SWIPE "LEFT hand, open, one step back: swipe toward YOUR RIGHT, 3–4 times, return slowly"
+echo; echo "Swipes: never hold an open hand still (that is an open palm). Swipe, close or drop the hand, bring it back, swipe again."
+take swipeLeft-far    swipeLeft  $SWIPE "LEFT hand, open, one step back: swipe toward YOUR LEFT, 3–4 times"
+take swipeRight-far   swipeRight $SWIPE "LEFT hand, open, one step back: swipe toward YOUR RIGHT, 3–4 times"
 
 echo; echo "All takes done. Next: scripts/replay-all.sh"

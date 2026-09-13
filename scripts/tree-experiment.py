@@ -41,7 +41,7 @@ def raw_features(p):
     w=p['VNHLKWRI']; size=d(w,p['VNHLKMMCP']); out={}
     for j in J: out['x_'+j[5:]]=(p[j][0]-w[0])/size; out['y_'+j[5:]]=(p[j][1]-w[1])/size
     return out
-def rules(f, min_open=0.30, min_closed=0.16):
+def rules(f, min_open=0.19, min_closed=0.11, max_span=0.6):
     e=[f['reach_i']>1.15,f['reach_m']>1.15,f['reach_r']>1.15,f['reach_l']>1.15]
     c=[f['reach_i']<0.85,f['reach_m']<0.85,f['reach_r']<0.85,f['reach_l']<0.85]
     th=f['thumb_straight']>1.1 and f['thumb_clear']>0.6; g=None
@@ -51,6 +51,7 @@ def rules(f, min_open=0.30, min_closed=0.16):
     elif all(c) and th and f['thumb_up']>0.3: g='thumbsUp'
     if g in ('openPalm','twoFingers') and f['ext']<min_open: g=None
     if g in ('fist','thumbsUp') and f['ext']<min_closed: g=None
+    if g in ('openPalm','twoFingers','fist') and f['span']>max_span: g=None
     return g or 'none'
 rows=[]
 for path in sorted(glob.glob('recordings/*.jsonl')):

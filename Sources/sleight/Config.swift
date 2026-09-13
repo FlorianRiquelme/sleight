@@ -67,8 +67,8 @@ struct Config: Codable {
         swipeMinDistance: 0.25,
         swipeWindowSeconds: 0.5,
         stillSpeed: 0.4,
-        minOpenExtent: 0.30,     // desk hands ≤0.26, open hand while talking 0.29, deliberate open palm ≥0.33
-        minClosedExtent: 0.16,   // curled hands on the far side of the desk ≤0.14, deliberate fist ≥0.19
+        minOpenExtent: 0.19,     // deliberate open palm: 0.33 at arm's length, 0.21 one step back
+        minClosedExtent: 0.11,   // deliberate fist: 0.19 at arm's length, 0.12 one step back
         mappings: [
             Gesture.openPalm.rawValue: .spotify("playpause"),
             Gesture.fist.rawValue: .media("mute"),

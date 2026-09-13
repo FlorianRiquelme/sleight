@@ -13,7 +13,9 @@ struct HandFeatures {
     var tipReach: CGFloat        // farthest fingertip from the wrist, in palm lengths
     var thumbStraight, thumbClear, thumbUp: Bool
     var extent: CGFloat          // landmark bounding-box diagonal, fraction of frame
-    var tooSmall: Bool           // open-hand pose rejected because the hand is too far/foreshortened
+    var span: CGFloat            // knuckle width (index MCP → little MCP) in palm lengths; see `maxPalmSpan`
+    var tooSmall: Bool           // pose rejected because the hand is too far away
+    var angled: Bool             // pose rejected because the palm does not face the camera
     var thumb: Bool { thumbStraight && thumbClear }
     var extendedCount: Int { [index, middle, ring, little].filter { $0 }.count }
     /// Enough fingers extended to count as an open hand; swipes only track open hands.
@@ -24,14 +26,23 @@ struct HandFeatures {
 /// Rule-based static pose classifier on Vision hand landmarks.
 /// All distances are normalized by hand size (wrist → middle MCP) for scale invariance.
 struct GestureClassifier {
-    /// Open-finger poses (open palm, two fingers) need at least this hand extent. A hand resting on
-    /// the desk is farther from the camera and foreshortened: fixtures show desk-life hands top out
-    /// at 0.26, an open hand held up while talking at 0.29, deliberate open palms start at 0.33.
-    var minOpenExtent: CGFloat = 0.30
+    /// Open-finger poses (open palm, two fingers) need at least this hand extent. Deliberate open
+    /// palms measure 0.33 at arm's length and 0.21 one step back; the floor only rejects hands
+    /// farther than that. Distance no longer separates gestures from desk hands (an open hand
+    /// held up while talking reaches 0.29), `maxPalmSpan` does.
+    var minOpenExtent: CGFloat = 0.19
     /// Closed poses (fist, thumbs up) need this much. A fist is compact, about 0.6 of an open
-    /// palm's extent at the same distance: deliberate fists measure 0.19–0.25, a curled hand on
-    /// the far side of the desk 0.12–0.14.
-    var minClosedExtent: CGFloat = 0.16
+    /// palm's extent at the same distance: 0.19 at arm's length, 0.12 one step back.
+    var minClosedExtent: CGFloat = 0.11
+
+    /// Knuckle width over palm length, at most, for open palm, fist and two fingers. A palm facing
+    /// the camera keeps its full wrist-to-knuckle length and measures 0.37–0.58 in every fixture at
+    /// both distances. A hand on the desk or gesturing while talking is seen at an angle, its palm
+    /// length foreshortens and the ratio grows: 0.64–0.72 for the open hand that fired at extent
+    /// 0.22, 0.6–1.9 for idle hands generally. Every size-normalized finger test above also
+    /// assumes an unforeshortened palm, so this is the precondition for trusting them. Thumbs up is
+    /// exempt: the hand is edge-on by nature (1.3–1.7).
+    static let maxPalmSpan: CGFloat = 0.6
 
     /// A finger is extended when its tip reaches past 1.15× its PIP distance from the wrist, and
     /// curled when it folds back inside 0.85×. In between is a relaxed finger: a hand on a mouse or
@@ -65,7 +76,7 @@ struct GestureClassifier {
               let ring = reach(tip: .ringTip, pip: .ringPIP),
               let little = reach(tip: .littleTip, pip: .littlePIP),
               let thumbTip = hand[.thumbTip], let thumbIP = hand[.thumbIP],
-              let indexMCP = hand[.indexMCP]
+              let indexMCP = hand[.indexMCP], let littleMCP = hand[.littleMCP]
         else { return nil }
         let reaches = [index, middle, ring, little]
         let ext = reaches.map { $0 > Self.extendRatio }
@@ -80,7 +91,8 @@ struct GestureClassifier {
                              curled: curl.filter { $0 }.count, tipReach: tipReach,
                              thumbStraight: thumbStraight, thumbClear: thumbClear,
                              thumbUp: thumbTip.y > indexMCP.y + 0.3 * size,
-                             extent: hand.extent, tooSmall: false)
+                             extent: hand.extent, span: dist(indexMCP, littleMCP) / size,
+                             tooSmall: false, angled: false)
         let n = f.extendedCount
         // Open palm ignores the thumb: a relaxed palm keeps it alongside the index (measured
         // 0.26–0.47 hand-widths from the index MCP, same range as a fist), so it carries no signal.
@@ -92,6 +104,7 @@ struct GestureClassifier {
         if let g = f.gesture {
             let floor = (g == .openPalm || g == .twoFingers) ? minOpenExtent : minClosedExtent
             if f.extent < floor { f.tooSmall = true; f.gesture = nil }
+            else if g != .thumbsUp && f.span > Self.maxPalmSpan { f.angled = true; f.gesture = nil }
         }
         return f
     }

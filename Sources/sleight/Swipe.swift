@@ -21,9 +21,12 @@ struct SwipeDetector {
     var maxStepSpeed: CGFloat = 6        // frame widths/s between consecutive samples; fixture swipes peak at 4.7,
                                          // a switch to the other hand shows as 6.5–9.2
     var gap: TimeInterval = 0.1          // a handedness flip across a longer detection gap is the other hand
+    var returnLockout: TimeInterval = 1.5 // seconds after a swipe during which the opposite direction is the
+                                         // hand coming back (fixture returns fire 1.0s after the swipe)
 
     private var samples: [(t: TimeInterval, p: CGPoint, open: Bool, side: VNChirality)] = []
     private var suppressUntil: TimeInterval = 0
+    private var lastSwipe: (t: TimeInterval, g: Gesture)?
     /// True when the last `push` discarded the buffer because the hand jumped or changed.
     private(set) var restarted = false
 
@@ -43,7 +46,10 @@ struct SwipeDetector {
         guard abs(dx) >= minDistance, abs(dy) <= abs(dx) * maxVerticalRatio else { return nil }
         samples.removeAll()
         suppressUntil = t + window
-        return dx < 0 ? .swipeRight : .swipeLeft
+        let g: Gesture = dx < 0 ? .swipeRight : .swipeLeft
+        if let last = lastSwipe, g != last.g, t - last.t < returnLockout { return nil }
+        lastSwipe = (t, g)
+        return g
     }
 
     /// Speed over the most recent ~150ms, in frame widths per second. Used to gate static gestures.
@@ -54,7 +60,7 @@ struct SwipeDetector {
         return hypot(last.p.x - ref.p.x, last.p.y - ref.p.y) / CGFloat(last.t - ref.t)
     }
 
-    mutating func reset() { samples.removeAll(); restarted = false }
+    mutating func reset() { samples.removeAll(); restarted = false; lastSwipe = nil }
 
     var trail: [CGPoint] { samples.map(\.p) }
 }

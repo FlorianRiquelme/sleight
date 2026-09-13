@@ -134,3 +134,49 @@ variety, not model capacity.
 **Revisit when:** `recordings/` holds right-hand and second-distance fixtures for every gesture
 (tracked in the issue backlog). If the raw-landmark tree still generalizes there, ship a personal
 model behind the same `Pipeline` interface and keep the rules as the fallback and the explainer.
+
+## 2026-09-13 Static poses need a palm facing the camera; the extent floors drop to one step back
+Supersedes "Extent floors: open poses 0.30, closed poses 0.16"; its revisit condition arrived. The
+one-step-back fixtures (`recordings/*-far.jsonl`, issue #2) measure fist 0.12, thumbs up 0.20,
+open palm 0.21, two fingers 0.23, all under the floors, and the far fist sits inside the idle
+fixture's desk hands (0.12–0.16), so no extent floor can admit one and reject the other. Palm
+size (wrist to middle knuckle), which the trees had preferred, cannot replace the floors either:
+the edge-on far thumbs up has a palm of 0.07, smaller than most desk hands (up to 0.12).
+Lowering the floors alone let two open hands from the idle fixture fire (extent 0.22 and 0.27).
+What separates them is orientation. Knuckle width over palm length (`span`) is 0.37–0.58 for every
+deliberate open palm, fist and two fingers at both distances, and 0.64–0.72 and 1.4 for the two
+misfires: a hand seen at an angle foreshortens its palm length, which also invalidates every
+size-normalized finger test. Open palm, fist and two fingers now need span ≤ 0.6
+(`GestureClassifier.maxPalmSpan`); thumbs up is edge-on by nature (1.3–1.7) and exempt. The floors
+move to 0.19 / 0.11, ten percent under the far fixtures; with them at 0 the idle fixture fires once
+more, so they stay as a distance limit. The depth-3 tree in `scripts/tree-experiment.py` found the
+same split on its own (span ≤ 0.62 for fist, ≤ 0.47 for open palm).
+Margins are thin on the fist side: far fists reach span 0.58 at the 98th percentile, the nearest
+misfire frame is 0.64. Right-hand fixtures were dropped from #2: the camera on the laptop arm
+barely sees that hand, and the `none` fixtures already hold thousands of right-hand frames.
+**Revisit if:** a deliberate gesture shows `ANGLED` in `replay -v` or the HUD. Measure that user's
+span before widening the gate; 0.6 is one user's hand.
+
+## 2026-09-13 A swipe in the opposite direction within 1.5 s is the hand coming back
+`swipeLeft-far` brought the hand back at swipe speed 1.0 s after a swipe and fired swipeRight. One
+step back a swipe covers 0.42 of the frame in 0.8 s and the return 0.44 in 1.2 s: the same
+kinematics, only the intent differs, so no speed or distance threshold separates them.
+`SwipeDetector.returnLockout` ignores the opposite direction for 1.5 s after a swipe. Same-direction
+repeats are unaffected (fixture swipes repeat every ~2 s). Cost: a deliberate reverse within 1.5 s
+is lost.
+**Revisit if:** users report a missed back-swipe; halve the lockout before removing it.
+
+## 2026-09-13 With two distances in the fixtures the rules still win; the tree now agrees with them
+Re-run of `scripts/tree-experiment.py` on 7786 idle frames and 2842 gesture frames at both
+distances, after the span gate. Per frame, the shipped rules misread 76 idle frames and recall
+fist 100%, open palm 95%, thumbs up 100%, two fingers 100%; at the fire level they misfire 0 times
+in 12 minutes of idle. The depth-4 tree on the 16 hand features misreads 29 idle frames under
+blocked cross-validation at 92–100% recall and rediscovers the rules' structure, span included.
+The depth-4 raw-landmark tree misreads 63 at 95–100% recall and still splits on the little-finger
+knuckle's x and the thumb tip's x: the orientation of one left hand, now at two distances. A model
+would buy a few idle frames per frame and nothing at the fire level, at the price of a classifier
+nobody can read in `replay -v`. The rules stay; the tree stays as the check that the feature set
+still explains the fixtures.
+**Revisit when:** a fixture arrives that the rules cannot pass without a new hand-written feature,
+or the set gains another user or hand. Then the tree is the first thing to run, and if it holds,
+the personal model goes behind the `Pipeline` interface with the rules as fallback and explainer.

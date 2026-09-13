@@ -43,6 +43,23 @@ final class SwipeDetectorTests: XCTestCase {
         XCTAssertEqual(fired, [.swipeLeft])
     }
 
+    func testReturnStrokeAfterASwipeIsIgnored() {
+        var d = SwipeDetector()
+        var fired: [Gesture] = []
+        // Swipe toward the user's left, come back 1.0s later at the same speed, then swipe left
+        // again 2.5s after the first: only the two leftward swipes count.
+        func stroke(from x0: CGFloat, dx: CGFloat, at t0: TimeInterval) {
+            for i in 0...9 { if let g = d.push(CGPoint(x: x0 + dx * CGFloat(i) / 9, y: 0.5), at: t0 + TimeInterval(i) / 30) { fired.append(g) } }
+        }
+        stroke(from: 0.3, dx: 0.3, at: 0)
+        stroke(from: 0.6, dx: -0.3, at: 1.0)
+        stroke(from: 0.3, dx: 0.3, at: 2.5)
+        XCTAssertEqual(fired, [.swipeLeft, .swipeLeft])
+        // Past the lockout the opposite direction is a deliberate swipe again.
+        stroke(from: 0.6, dx: -0.3, at: 4.5)
+        XCTAssertEqual(fired, [.swipeLeft, .swipeLeft, .swipeRight])
+    }
+
     func testSwipeSurvivesDetectionDropouts() {
         // Vision loses the hand for several frames mid-swipe; samples must persist across the gap.
         var d = SwipeDetector()

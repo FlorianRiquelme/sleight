@@ -25,8 +25,10 @@ A static gesture fires once when held for `holdFrames` frames (~500ms), then nee
 A swipe fires when the palm travels `swipeMinDistance` of the frame width within
 `swipeWindowSeconds`, mostly horizontally. `stillSpeed` is the palm speed above
 which static gestures are suppressed. Static gestures also need the hand's landmark extent to
-reach `minOpenExtent` (open palm, two fingers) or `minClosedExtent` (fist, thumbs up) of the frame;
-a hand resting on the desk is smaller and foreshortened, a hand raised to gesture is not.
+reach `minOpenExtent` (open palm, two fingers) or `minClosedExtent` (fist, thumbs up) of the frame,
+which admits a hand up to about one step back from the camera, and open palm, fist and two fingers
+need the palm facing the camera: a hand resting on the desk or waved while talking is seen at an
+angle, its palm length foreshortens, and the HUD marks it `ANGLED`.
 
 ## Run
 
@@ -96,8 +98,8 @@ and speed. `--config` replays against a different config file without touching t
   "swipeMinDistance": 0.25,
   "swipeWindowSeconds": 0.5,
   "stillSpeed": 0.4,
-  "minOpenExtent": 0.30,
-  "minClosedExtent": 0.16,
+  "minOpenExtent": 0.19,
+  "minClosedExtent": 0.11,
   "mappings": {
     "openPalm":   { "type": "spotify", "command": "playpause" },
     "fist":       { "type": "media",   "key": "mute" },
