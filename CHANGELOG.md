@@ -6,6 +6,7 @@ first within a section.
 ## Unreleased
 
 ### Fixed
+- Stopping a recording with Ctrl-C no longer crashes on a frame that arrives while the file closes.
 - Hands resting on the mouse or keyboard no longer fire fist, thumbs up or two fingers: closed
   fingers must fold past their PIP, and a fist keeps its fingertips inside the palm.
 - No more phantom swipes when Vision alternates between both hands on the desk: a swipe is measured

@@ -64,6 +64,7 @@ final class Recorder {
     private let start: TimeInterval
     private(set) var frameCount = 0
     private let queue = DispatchQueue(label: "sleight.recorder")
+    private var closed = false
 
     init(url: URL, camera: String, label: String?, config: Config, start: TimeInterval) throws {
         self.url = url
@@ -81,7 +82,7 @@ final class Recorder {
     func append(hand: Hand?, at t: TimeInterval, result: Pipeline.Result) {
         let frame = RecordedFrame(t: t - start, label: label, hand: hand.map(RecordedFrame.HandData.init), d: .init(result))
         queue.async { [self] in
-            guard var line = try? encoder.encode(frame) else { return }
+            guard !closed, var line = try? encoder.encode(frame) else { return }
             line.append(0x0A)
             handle.write(line)
             frameCount += 1
@@ -89,7 +90,7 @@ final class Recorder {
     }
 
     func close() {
-        queue.sync { try? handle.close() }
+        queue.sync { closed = true; try? handle.close() }
     }
 
     static func defaultURL() -> URL {
