@@ -19,5 +19,9 @@ first within a section.
 - JSON config at `~/.config/gesturecam/config.json` with `media`, `key`, `shell` actions.
 - Static gestures open palm, fist, two fingers, thumbs up on Vision hand landmarks.
 
+### Fixed
+- Open palm never fired for a relaxed hand with the thumb alongside the index; the thumb is no
+  longer part of the open palm rule.
+
 ### Changed
 - Cooldown uses frame timestamps instead of wall clock so replays are deterministic.

@@ -45,7 +45,9 @@ struct GestureClassifier {
                              thumbStraight: thumbStraight, thumbClear: thumbClear,
                              thumbUp: thumbTip.y > indexMCP.y + 0.3 * size)
         let n = f.extendedCount
-        if n == 4 && f.thumb { f.gesture = .openPalm }
+        // Open palm ignores the thumb: a relaxed palm keeps it alongside the index (measured
+        // 0.26–0.47 hand-widths from the index MCP, same range as a fist), so it carries no signal.
+        if n == 4 { f.gesture = .openPalm }
         else if n == 0 && !f.thumb { f.gesture = .fist }
         else if index && middle && !ring && !little { f.gesture = .twoFingers }
         else if n == 0 && f.thumb && f.thumbUp { f.gesture = .thumbsUp }

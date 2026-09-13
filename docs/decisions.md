@@ -13,6 +13,13 @@ are debuggable frame by frame in the HUD and in `replay -v`; a model is not.
 **Revisit if:** labeled recordings show a pose that no threshold separates cleanly, or the gesture
 set grows past ~8. The recordings are already the training set.
 
+## 2026-09-13 Open palm is four extended fingers; the thumb is ignored
+First labeled fixture (`recordings/openPalm-hold.jsonl`) showed a relaxed palm keeps the thumb
+0.26–0.47 hand-widths from the index knuckle, the same range as a fist, so the "thumb clear" test
+rejected every one of 284 otherwise-perfect frames. Thumb tests stay for thumbs up, where they
+discriminate.
+**Revisit if:** a four-fingers-up, thumb-tucked pose is wanted as its own gesture.
+
 ## 2026-09-13 Static gestures fire once on hold, never repeat while held
 A held pose is one intent. Repeating requires leaving the pose. Cooldown is a second guard against
 flicker between two poses.

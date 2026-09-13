@@ -40,6 +40,8 @@ final class PipelineTests: XCTestCase {
     func testClassifierOnSyntheticPoses() {
         let c = GestureClassifier()
         XCTAssertEqual(c.classify(hand(index: true, middle: true, ring: true, little: true, thumbOut: true)), .openPalm)
+        XCTAssertEqual(c.classify(hand(index: true, middle: true, ring: true, little: true, thumbOut: false)), .openPalm,
+                       "relaxed palm with thumb alongside the index is still an open palm")
         XCTAssertEqual(c.classify(hand(index: false, middle: false, ring: false, little: false, thumbOut: false)), .fist)
         XCTAssertEqual(c.classify(hand(index: true, middle: true, ring: false, little: false, thumbOut: false)), .twoFingers)
         XCTAssertEqual(c.classify(hand(index: false, middle: false, ring: false, little: false, thumbOut: true, thumbUp: true)), .thumbsUp)
