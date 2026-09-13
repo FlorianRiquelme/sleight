@@ -1,5 +1,6 @@
 import AppKit
 import AVFoundation
+import QuartzCore
 
 /// Menu bar presence: enable toggle, live state, camera picker, config access.
 final class StatusBarController: NSObject {
@@ -11,6 +12,7 @@ final class StatusBarController: NSObject {
     private let cameraMenu = NSMenu()
     private var flashReset: DispatchWorkItem?
     private lazy var debug = DebugWindowController(engine: engine)
+    private let recordItem = NSMenuItem(title: "Start Recording", action: #selector(toggleRecording), keyEquivalent: "")
 
     private static let emoji: [Gesture: String] = [.openPalm: "✋", .fist: "✊", .twoFingers: "✌️", .thumbsUp: "👍", .swipeLeft: "👈", .swipeRight: "👉"]
 
@@ -36,6 +38,8 @@ final class StatusBarController: NSObject {
         menu.addItem(camItem)
         menu.addItem(.separator())
         menu.addItem(withTitle: "Debug Window", action: #selector(showDebug), keyEquivalent: "d").target = self
+        recordItem.target = self
+        menu.addItem(recordItem)
         menu.addItem(withTitle: "Edit Config…", action: #selector(editConfig), keyEquivalent: ",").target = self
         menu.addItem(withTitle: "Reload Config", action: #selector(reloadConfig), keyEquivalent: "r").target = self
         menu.addItem(.separator())
@@ -100,6 +104,25 @@ final class StatusBarController: NSObject {
     }
 
     @objc func showDebug() { debug.show() }
+
+    @objc private func toggleRecording() {
+        if let rec = engine.recorder {
+            engine.recorder = nil
+            rec.close()
+            recordItem.title = "Start Recording"
+            stateItem.title = "Saved \(rec.url.lastPathComponent)"
+            NSWorkspace.shared.activateFileViewerSelecting([rec.url])
+        } else {
+            do {
+                engine.recorder = try Recorder(url: Recorder.defaultURL(), camera: device.localizedName, label: nil,
+                                               config: engine.config, start: CACurrentMediaTime())
+                recordItem.title = "Stop Recording"
+                stateItem.title = "Recording…"
+            } catch {
+                stateItem.title = "Recording failed: \(error.localizedDescription)"
+            }
+        }
+    }
 
     @objc private func editConfig() {
         if !FileManager.default.fileExists(atPath: Config.path.path) { try? Config.default.save() }

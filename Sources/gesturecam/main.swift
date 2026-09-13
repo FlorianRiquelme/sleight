@@ -1,6 +1,7 @@
 import AppKit
 import AVFoundation
 import Foundation
+import QuartzCore
 
 // MARK: - CLI args
 let args = CommandLine.arguments
@@ -12,6 +13,8 @@ let verbose = args.contains("-v")
 let noUI = args.contains("--no-ui")
 let dryRun = args.contains("--dry-run")
 let debugAtLaunch = args.contains("--debug")
+let recordPath = flagValue("--record")
+let recordLabel = flagValue("--label")
 
 func log(_ s: String) {
     let t = DateFormatter(); t.dateFormat = "HH:mm:ss.SSS"
@@ -26,9 +29,18 @@ if args.contains("--list") {
 }
 
 var config: Config
-do { config = try Config.load() } catch {
-    log("config error at \(Config.path.path): \(error). Using defaults.")
-    config = .default
+if let alt = flagValue("--config") {
+    config = try JSONDecoder().decode(Config.self, from: Data(contentsOf: URL(fileURLWithPath: alt)))
+} else {
+    do { config = try Config.load() } catch {
+        log("config error at \(Config.path.path): \(error). Using defaults.")
+        config = .default
+    }
+}
+
+// gesturecam replay <file.jsonl> [--config other.json] [-v]
+if args.count > 2, args[1] == "replay" {
+    exit(try Replay.run(file: URL(fileURLWithPath: args[2]), config: config, verbose: verbose))
 }
 
 if let name = flagValue("--fire") {
@@ -86,6 +98,18 @@ AVCaptureDevice.requestAccess(for: .video) { granted in
         do {
             try engine.start(device: device)
             log("camera: \(device.localizedName)  config: \(Config.path.path)")
+            if let recordPath {
+                let url = URL(fileURLWithPath: recordPath)
+                engine.recorder = try Recorder(url: url, camera: device.localizedName, label: recordLabel,
+                                               config: config, start: CACurrentMediaTime())
+                log("recording to \(url.path)\(recordLabel.map { "  label=\($0)" } ?? "")")
+                signal(SIGINT) { _ in
+                    engine.recorder?.close()
+                    log("recording closed (\(engine.recorder?.frameCount ?? 0) frames)")
+                    exit(0)
+                }
+                signal(SIGTERM) { _ in engine.recorder?.close(); exit(0) }
+            }
             if debugAtLaunch { statusBar?.showDebug() }
         } catch {
             log("camera error: \(error)"); exit(1)

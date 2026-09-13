@@ -36,6 +36,8 @@ swift build
 .build/debug/gesturecam --list          # cameras
 .build/debug/gesturecam --camera iphone # pick camera by name substring
 .build/debug/gesturecam --fire fist     # run one mapping once (test actions)
+.build/debug/gesturecam --record out.jsonl --label fist   # record landmarks while you perform a gesture
+.build/debug/gesturecam replay out.jsonl [-v] [--config other.json]   # re-run a recording offline
 ./scripts/bundle.sh                     # build/gesturecam.app
 swift test                              # swipe detector tests
 ```
@@ -52,6 +54,20 @@ Needs Camera permission, and Accessibility permission to post key events.
   palm speed vs `stillSpeed` with a swipe distance meter, fps, and the last fired gesture
 
 Frame conversion for the preview only runs while the window is open.
+
+## Recording and replay
+
+A recording is a `.jsonl` file: a header with the camera and config, then one line per frame
+with the hand landmarks Vision produced and what the pipeline derived at the time (pose, gating,
+speed, hold count, fired gesture). No images. Start one with `--record <file>` and stop with Ctrl-C,
+or use "Start Recording" in the menu, which writes to `~/.config/gesturecam/recordings/`.
+
+`replay <file>` runs the recorded landmarks through the current classifier and config and lists
+every fire. It marks fires that differ from what happened at record time, so you can change a
+threshold and see exactly which misfires disappear or appear. With `--label <gesture>` set at record
+time, replay also reports correct vs. wrong fires and exits non-zero if any are wrong, which makes a
+labeled recording usable as a regression test. `-v` prints every frame's finger flags, hold progress,
+and speed. `--config` replays against a different config file without touching the live one.
 
 ## Config
 

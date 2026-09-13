@@ -20,40 +20,29 @@ struct DebugFrame {
     let lastFired: (gesture: Gesture, at: Date)?
 }
 
-/// Camera → hand pose → classifier → stabilizer → cooldown → onGesture.
+/// Camera → hand pose → Pipeline → actions. Owns the camera and the Vision detector.
 final class Engine {
-    var config: Config
+    var config: Config { pipeline.config }
     private(set) var camera: Camera?
     private let detector = HandPoseDetector()
-    private let classifier = GestureClassifier()
-    private var stabilizer: GestureStabilizer
-    private var swipe: SwipeDetector
-    private var lastFire = Date.distantPast
+    let pipeline: Pipeline
     private var handVisible = false
     private var frames = 0
     private var lastReport = Date()
+    private var lastFPS = 0
+    private var lastFired: (gesture: Gesture, at: Date)?
 
     var onGesture: ((Gesture) -> Void)?
     var onHand: ((Bool) -> Void)?
     var onFPS: ((Int) -> Void)?
     var onRaw: ((Hand, Gesture?) -> Void)?
     var onDebug: ((DebugFrame) -> Void)?
-    private var lastFPS = 0
-    private var lastFired: (gesture: Gesture, at: Date)?
+    var recorder: Recorder?
 
     var isRunning: Bool { camera?.session.isRunning ?? false }
 
     init(config: Config) {
-        self.config = config
-        self.stabilizer = GestureStabilizer(holdFrames: config.holdFrames)
-        self.swipe = Engine.makeSwipe(config)
-    }
-
-    private static func makeSwipe(_ c: Config) -> SwipeDetector {
-        var s = SwipeDetector()
-        s.minDistance = CGFloat(c.swipeMinDistance)
-        s.window = c.swipeWindowSeconds
-        return s
+        pipeline = Pipeline(config: config)
     }
 
     func start(device: AVCaptureDevice) throws {
@@ -67,24 +56,11 @@ final class Engine {
     func stop() {
         camera?.stop()
         camera = nil
-        stabilizer = GestureStabilizer(holdFrames: config.holdFrames)
-        swipe.reset()
+        pipeline.reset()
         if handVisible { handVisible = false; onHand?(false) }
     }
 
-    func apply(_ newConfig: Config) {
-        config = newConfig
-        stabilizer = GestureStabilizer(holdFrames: newConfig.holdFrames)
-        swipe = Engine.makeSwipe(newConfig)
-    }
-
-    private func fire(_ g: Gesture) {
-        let now = Date()
-        guard now.timeIntervalSince(lastFire) >= config.cooldownSeconds else { return }
-        lastFire = now
-        lastFired = (g, now)
-        onGesture?(g)
-    }
+    func apply(_ newConfig: Config) { pipeline.apply(newConfig) }
 
     private func handle(_ buf: CMSampleBuffer) {
         frames += 1
@@ -92,32 +68,16 @@ final class Engine {
         if (hand != nil) != handVisible {
             handVisible = hand != nil
             onHand?(handVisible)
-            if !handVisible { swipe.reset() }
         }
 
-        // Dynamic: swipes on palm motion.
         let t = CACurrentMediaTime()
-        var moving = false
-        var swiped = false
-        var speed: CGFloat = 0
-        if let center = hand?.palmCenter {
-            if let s = swipe.push(center, at: t) {
-                _ = stabilizer.push(nil)
-                fire(s)
-                swiped = true
-            } else {
-                speed = swipe.recentSpeed(at: t)
-                moving = speed > CGFloat(config.stillSpeed)
-            }
+        let r = pipeline.process(hand, at: t)
+        if let h = hand, !r.gated { onRaw?(h, r.features?.gesture) }
+        if let g = r.fired {
+            lastFired = (g, Date())
+            onGesture?(g)
         }
-
-        // Static: only while the hand is still, so a moving open palm doesn't also fire.
-        let features = (moving || swiped) ? nil : hand.flatMap(classifier.features)
-        let raw = features?.gesture
-        if !swiped {
-            if let h = hand { onRaw?(h, raw) }
-            if let g = stabilizer.push(raw) { fire(g) }
-        }
+        recorder?.append(hand: hand, at: t, result: r)
 
         if let onDebug {
             var cg: CGImage?
@@ -125,10 +85,10 @@ final class Engine {
                 VTCreateCGImageFromCVPixelBuffer(pb, options: nil, imageOut: &cg)
             }
             onDebug(DebugFrame(
-                image: cg, hand: hand, features: features, gated: moving || swiped, speed: speed,
-                trail: swipe.trail, swipeMinDistance: CGFloat(config.swipeMinDistance),
+                image: cg, hand: hand, features: r.features, gated: r.gated, speed: r.speed,
+                trail: r.trail, swipeMinDistance: CGFloat(config.swipeMinDistance),
                 stillSpeed: CGFloat(config.stillSpeed),
-                candidate: stabilizer.candidate, holdCount: stabilizer.count, holdFrames: stabilizer.holdFrames,
+                candidate: r.candidate, holdCount: r.holdCount, holdFrames: pipeline.holdFrames,
                 fps: lastFPS, lastFired: lastFired))
         }
 
