@@ -5,7 +5,8 @@ every `*.jsonl` here and fails if any labeled fire is wrong.
 
 Naming: `<label>-<what happened>.jsonl`, e.g. `fist-slow-close.jsonl`,
 `none-resting-hand-on-desk.jsonl`. The label inside the header is what counts; the filename is for
-humans. Label `none` means "nothing should fire".
+humans. Label `none` means "nothing should fire". `*-misfire-*.jsonl` files come from the
+"Save Last 20 s As…" menu.
 
 Contents are Vision landmark coordinates only, no images.
 

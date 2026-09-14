@@ -21,6 +21,15 @@ first within a section.
   from an open hand, and a jump or a handedness flip after a detection gap restarts the motion.
 - A far, curled hand no longer counts as a fist: closed poses have their own extent floor.
 
+### Added
+- "Save Last 20 s As…" menu item captures the last 20 seconds seen by the pipeline as a labeled
+  `.jsonl` recording, without needing a recording already running.
+- Every fire posts a Notification Center banner (config `notifyOnFire`, menu "Notify on Fire") and
+  appends a line to `~/.config/sleight/fires.log`, so fires with silent mappings are noticeable and
+  reviewable.
+- Usage log (`~/.config/sleight/usage.csv`) samples CPU, memory, fps and hand-visibility every
+  `--usage-interval` seconds; `scripts/usage-report.sh` summarizes it.
+
 ### Changed
 - `replay --csv` prints one row per frame of the current pipeline's derived state for offline
   measurement across fixtures; `replay -v` and the CSV include the palm length.

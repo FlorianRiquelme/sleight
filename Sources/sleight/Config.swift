@@ -56,6 +56,7 @@ struct Config: Codable {
     var minOpenExtent: Double       // open palm / two fingers need this landmark extent (fraction of frame)
     var minClosedExtent: Double     // fist / thumbs up need this much; a fist is compact, so it is lower
     var mappings: [String: Action]
+    var notifyOnFire: Bool          // macOS notification on every fire, so silent mappings are still visible
 
     static let path = FileManager.default.homeDirectoryForCurrentUser
         .appendingPathComponent(".config/sleight/config.json")
@@ -77,15 +78,17 @@ struct Config: Codable {
             // Natural direction: content follows the hand. Swipe left → space on the right.
             Gesture.swipeLeft.rawValue: .key("ctrl+right"),
             Gesture.swipeRight.rawValue: .key("ctrl+left"),
-        ]
+        ],
+        notifyOnFire: true
     )
 
-    private enum K: String, CodingKey { case camera, holdFrames, cooldownSeconds, swipeMinDistance, swipeWindowSeconds, stillSpeed, minOpenExtent, minClosedExtent, mappings }
+    private enum K: String, CodingKey { case camera, holdFrames, cooldownSeconds, swipeMinDistance, swipeWindowSeconds, stillSpeed, minOpenExtent, minClosedExtent, mappings, notifyOnFire }
 
-    init(camera: String?, holdFrames: Int, cooldownSeconds: Double, swipeMinDistance: Double, swipeWindowSeconds: Double, stillSpeed: Double, minOpenExtent: Double, minClosedExtent: Double, mappings: [String: Action]) {
+    init(camera: String?, holdFrames: Int, cooldownSeconds: Double, swipeMinDistance: Double, swipeWindowSeconds: Double, stillSpeed: Double, minOpenExtent: Double, minClosedExtent: Double, mappings: [String: Action], notifyOnFire: Bool) {
         self.camera = camera; self.holdFrames = holdFrames; self.cooldownSeconds = cooldownSeconds
         self.swipeMinDistance = swipeMinDistance; self.swipeWindowSeconds = swipeWindowSeconds
         self.stillSpeed = stillSpeed; self.minOpenExtent = minOpenExtent; self.minClosedExtent = minClosedExtent; self.mappings = mappings
+        self.notifyOnFire = notifyOnFire
     }
 
     init(from d: Decoder) throws {
@@ -101,6 +104,7 @@ struct Config: Codable {
         minClosedExtent = try c.decodeIfPresent(Double.self, forKey: .minClosedExtent) ?? def.minClosedExtent
         // Gestures missing from the file get their default; map to {"type":"none"} to disable one.
         mappings = def.mappings.merging(try c.decodeIfPresent([String: Action].self, forKey: .mappings) ?? [:]) { $1 }
+        notifyOnFire = try c.decodeIfPresent(Bool.self, forKey: .notifyOnFire) ?? def.notifyOnFire
     }
 
     func action(for g: Gesture) -> Action? {

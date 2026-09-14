@@ -41,6 +41,8 @@ final class Engine {
     var onDebug: ((DebugFrame) -> Void)?
     var onCameraError: ((String) -> Void)?
     var recorder: Recorder?
+    let recent = FrameBuffer(seconds: 20)
+    var usage: UsageLog?
 
     var isRunning: Bool { camera?.session.isRunning ?? false }
 
@@ -82,6 +84,8 @@ final class Engine {
             onGesture?(g)
         }
         recorder?.append(hand: hand, at: t, result: r)
+        recent.append(hand: hand, at: t, result: r)
+        usage?.note(hand: hand != nil)
 
         if let onDebug {
             var cg: CGImage?

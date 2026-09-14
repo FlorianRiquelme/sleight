@@ -47,6 +47,7 @@ swift build
 ./scripts/start.sh                      # rebuild the .app and relaunch it; --dev runs a debug build in the foreground
 ./scripts/record-fixtures.sh            # guided, timed recording of the one-step-back fixtures (issue #2)
 uv run scripts/tree-experiment.py       # would a learned classifier beat the rules on the fixtures? (needs uv)
+./scripts/usage-report.sh               # summarize ~/.config/sleight/usage.csv
 swift test                              # swipe detector tests
 ```
 
@@ -88,6 +89,19 @@ palm length and speed. `--csv` prints one row per frame of what the current pipe
 gating, speed, palm length, extent, span, hold, fire) and nothing else, for measuring across
 fixtures offline. `--config` replays against a different config file without touching the live one.
 
+"Save Last 20 s As…" in the menu writes the last 20 seconds the pipeline has seen to
+`~/.config/sleight/recordings/<label>-misfire-yyyyMMdd-HHmmss.jsonl`, without needing a recording
+already running. Pick the gesture that should have fired, or "none" if nothing should have — the
+label makes the file replayable as a regression fixture right away.
+
+## Usage log
+
+Sleight samples its own resource use every `--usage-interval` seconds (default 60) into
+`~/.config/sleight/usage.csv`: `time, cpu_pct, rss_mb, fps, hand_pct, battery_pct, charging`.
+`cpu_pct` covers only the sleight process — Vision's GPU/ANE work and the camera daemon are outside
+it — so the battery columns are the complementary real-world number. `./scripts/usage-report.sh`
+prints overall averages/peaks and a per-hour table from the log.
+
 ## Config
 
 `~/.config/sleight/config.json` is written with defaults on first run.
@@ -109,9 +123,14 @@ fixtures offline. `--config` replays against a different config file without tou
     "thumbsUp":   { "type": "media",   "key": "volumeup" },
     "swipeLeft":  { "type": "key",     "keys": "ctrl+right" },
     "swipeRight": { "type": "key",     "keys": "ctrl+left" }
-  }
+  },
+  "notifyOnFire": true
 }
 ```
+
+`notifyOnFire` posts a Notification Center banner (no sound) on every fire, action or not, so a
+gesture with a silent mapping is still noticeable while working; "Notify on Fire" in the menu
+toggles it. Every fire is also appended to `~/.config/sleight/fires.log` with a timestamp.
 
 Other examples: `{ "type": "key", "keys": "cmd+shift+m" }`, `{ "type": "shell", "command": "open -a Notes" }`.
 

@@ -100,6 +100,46 @@ final class Recorder {
     }
 }
 
+/// Ring buffer of the last `seconds` of frames, so a misfire can be saved as a labeled
+/// recording after the fact without having started one in advance.
+final class FrameBuffer {
+    private struct Entry { let hand: Hand?; let t: TimeInterval; let result: Pipeline.Result }
+    private let seconds: TimeInterval
+    private let lock = NSLock()
+    private var entries: [Entry] = []
+
+    init(seconds: TimeInterval) {
+        self.seconds = seconds
+    }
+
+    /// Called on the camera queue.
+    func append(hand: Hand?, at t: TimeInterval, result: Pipeline.Result) {
+        lock.lock(); defer { lock.unlock() }
+        entries.append(Entry(hand: hand, t: t, result: result))
+        let cutoff = t - seconds
+        while let first = entries.first, first.t < cutoff { entries.removeFirst() }
+    }
+
+    /// Writes the buffered frames as a .jsonl recording, rebased so the first frame is t=0.
+    /// Returns the frame count. Called from the main thread.
+    func save(to url: URL, label: String, camera: String, config: Config) throws -> Int {
+        lock.lock()
+        let snapshot = entries
+        lock.unlock()
+        guard let first = snapshot.first else { return 0 }
+        let rec = try Recorder(url: url, camera: camera, label: label, config: config, start: first.t)
+        for e in snapshot { rec.append(hand: e.hand, at: e.t, result: e.result) }
+        rec.close()
+        return snapshot.count
+    }
+
+    static func misfireURL(label: String) -> URL {
+        let f = DateFormatter(); f.dateFormat = "yyyyMMdd-HHmmss"
+        return Config.path.deletingLastPathComponent()
+            .appendingPathComponent("recordings/\(label)-misfire-\(f.string(from: Date())).jsonl")
+    }
+}
+
 enum Recording {
     static func load(_ url: URL) throws -> (header: RecordingHeader?, frames: [RecordedFrame]) {
         let dec = JSONDecoder()

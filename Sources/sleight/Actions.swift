@@ -109,6 +109,18 @@ enum ActionRunner {
 
     // MARK: shell
 
+    /// Notification Center banner, no sound. osascript so it works unbundled; the banner is what
+    /// makes a fire with a silent or unmapped action noticeable while working.
+    static func notify(title: String, body: String) {
+        func q(_ s: String) -> String { s.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"") }
+        let p = Process()
+        p.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
+        p.arguments = ["-e", "display notification \"\(q(body))\" with title \"\(q(title))\""]
+        p.standardOutput = FileHandle.nullDevice
+        p.standardError = FileHandle.nullDevice
+        try? p.run()
+    }
+
     static func shell(_ command: String) {
         let p = Process()
         p.executableURL = URL(fileURLWithPath: "/bin/zsh")

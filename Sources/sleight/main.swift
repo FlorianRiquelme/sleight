@@ -15,6 +15,7 @@ let dryRun = args.contains("--dry-run")
 let debugAtLaunch = args.contains("--debug")
 let recordPath = flagValue("--record")
 let recordLabel = flagValue("--label")
+let usageInterval = flagValue("--usage-interval").flatMap(Double.init) ?? 60
 
 func log(_ s: String) {
     let t = DateFormatter(); t.dateFormat = "HH:mm:ss.SSS"
@@ -73,9 +74,18 @@ engine.onRaw = { h, raw in
         log("raw=\(raw?.rawValue ?? "-") conf=\(String(format: "%.2f", h.confidence)) joints=\(h.points.count) \(side)")
     }
 }
+let firesLog = Config.path.deletingLastPathComponent().appendingPathComponent("fires.log")
 let fireGesture: (Gesture) -> Void = { g in
     let action = engine.config.action(for: g)
-    log("GESTURE  \(g.rawValue) → \(action?.summary ?? "no action")\(dryRun ? " (dry run)" : "")")
+    let summary = action?.summary ?? "no action"
+    log("GESTURE  \(g.rawValue) → \(summary)\(dryRun ? " (dry run)" : "")")
+    // One line per fire, wall clock, so a day can be reviewed next to usage.csv and the misfire captures.
+    let f = DateFormatter(); f.dateFormat = "yyyy-MM-dd'T'HH:mm:ss"
+    if !FileManager.default.fileExists(atPath: firesLog.path) { FileManager.default.createFile(atPath: firesLog.path, contents: nil) }
+    if let h = try? FileHandle(forWritingTo: firesLog) {
+        h.seekToEndOfFile(); h.write("\(f.string(from: Date()))  \(g.rawValue) → \(summary)\n".data(using: .utf8)!); try? h.close()
+    }
+    if engine.config.notifyOnFire { ActionRunner.notify(title: "sleight: \(g.rawValue)", body: summary) }
     guard !dryRun, let action else { return }
     do { try ActionRunner.run(action) } catch { log("action failed: \(error)") }
 }
@@ -98,6 +108,8 @@ engine.onCameraError = { msg in uiCameraError?(msg); log("camera error: \(msg)")
 if !dryRun && !ActionRunner.ensureAccessibility() {
     log("Accessibility permission missing: grant it in System Settings → Privacy & Security → Accessibility, or actions will be swallowed.")
 }
+
+engine.usage = UsageLog(url: Config.path.deletingLastPathComponent().appendingPathComponent("usage.csv"), interval: usageInterval)
 
 if let device {
     AVCaptureDevice.requestAccess(for: .video) { granted in

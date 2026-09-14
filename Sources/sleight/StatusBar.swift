@@ -18,6 +18,8 @@ final class StatusBarController: NSObject, NSMenuDelegate {
     private var flashReset: DispatchWorkItem?
     private lazy var debug = DebugWindowController(engine: engine)
     private let recordItem = NSMenuItem(title: "Start Recording", action: #selector(toggleRecording), keyEquivalent: "")
+    private let misfireMenu = NSMenu()
+    private let notifyItem = NSMenuItem(title: "Notify on Fire", action: #selector(toggleNotify), keyEquivalent: "")
 
     private var handVisible = false
     private var userPaused = false
@@ -59,6 +61,13 @@ final class StatusBarController: NSObject, NSMenuDelegate {
         menu.addItem(withTitle: "Debug Window", action: #selector(showDebug), keyEquivalent: "d").target = self
         recordItem.target = self
         menu.addItem(recordItem)
+        let misfireItem = NSMenuItem(title: "Save Last 20 s As…", action: nil, keyEquivalent: "")
+        misfireItem.submenu = misfireMenu
+        buildMisfireMenu()
+        menu.addItem(misfireItem)
+        notifyItem.target = self
+        notifyItem.state = engine.config.notifyOnFire ? .on : .off
+        menu.addItem(notifyItem)
         menu.addItem(withTitle: "Edit Config…", action: #selector(editConfig), keyEquivalent: ",").target = self
         menu.addItem(withTitle: "Reload Config", action: #selector(reloadConfig), keyEquivalent: "r").target = self
         launchAtLoginItem.target = self
@@ -228,6 +237,39 @@ final class StatusBarController: NSObject, NSMenuDelegate {
         }
     }
 
+    private func buildMisfireMenu() {
+        let none = NSMenuItem(title: "none – nothing should have fired", action: #selector(saveMisfire(_:)), keyEquivalent: "")
+        none.target = self
+        none.representedObject = "none"
+        misfireMenu.addItem(none)
+        misfireMenu.addItem(.separator())
+        for g in Gesture.allCases {
+            let mi = NSMenuItem(title: "\(Self.emoji[g] ?? "") \(g.rawValue)", action: #selector(saveMisfire(_:)), keyEquivalent: "")
+            mi.target = self
+            mi.representedObject = g.rawValue
+            misfireMenu.addItem(mi)
+        }
+    }
+
+    @objc private func saveMisfire(_ sender: NSMenuItem) {
+        guard let label = sender.representedObject as? String else { return }
+        let url = FrameBuffer.misfireURL(label: label)
+        do {
+            let n = try engine.recent.save(to: url, label: label, camera: device?.localizedName ?? "unknown", config: engine.config)
+            stateItem.title = "Saved \(url.lastPathComponent) (\(n) frames)"
+        } catch {
+            stateItem.title = "Capture failed: \(error.localizedDescription)"
+        }
+    }
+
+    @objc private func toggleNotify() {
+        var cfg = engine.config
+        cfg.notifyOnFire.toggle()
+        try? cfg.save()
+        engine.apply(cfg)
+        notifyItem.state = cfg.notifyOnFire ? .on : .off
+    }
+
     @objc private func editConfig() {
         if !FileManager.default.fileExists(atPath: Config.path.path) { try? Config.default.save() }
         NSWorkspace.shared.open(Config.path)
@@ -236,6 +278,7 @@ final class StatusBarController: NSObject, NSMenuDelegate {
     @objc private func reloadConfig() {
         do {
             engine.apply(try Config.load())
+            notifyItem.state = engine.config.notifyOnFire ? .on : .off
             stateItem.title = "Config reloaded"
         } catch {
             stateItem.title = "Config error: \(error.localizedDescription)"
