@@ -5,6 +5,21 @@ first within a section.
 
 ## Unreleased
 
+### Fixed
+- First dogfooding day (4.5 h, 29 fires, 15 wrong) turned into 14 fixtures that now replay clean:
+  - A hand resting at the frame edge with its fingers pointing down no longer reads as open palm
+    or thumbs up: every static pose needs the middle knuckle at least 0.3 palm lengths above the wrist.
+  - A hand pitched on the desk, whose fingertips read 2.1–3.0 palm lengths from the wrist, is no
+    longer an open palm (`maxOpenTipReach` 2.1; real open palms measure 1.8–2.0).
+  - A relaxed closed hand on the desk no longer fires fist: `fistTipReach` 0.9 → 0.8.
+  - Vision switching to the other hand, or to a half-visible one, no longer completes a swipe: a
+    handedness flip combined with a jump of 0.15 frame widths restarts the motion (real swipes
+    flip with steps of 0.03–0.05). The old "flip across a 0.1 s gap" rule is replaced.
+- Known: a slow reach across the desk from an open hand still fires a swipe (1 in 4.5 h).
+
+### Changed
+- `replay --csv` and `replay -v` include fingertip reach (`tips`) and uprightness (`up`).
+
 ## 0.1.0 - 2026-09-14
 
 ### Fixed

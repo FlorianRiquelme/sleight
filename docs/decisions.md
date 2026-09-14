@@ -198,3 +198,30 @@ takes stay out of `recordings/` because of it.
 **Revisit when:** a real-use swipe recording with natural wind-ups exists (#3). If those pause
 ≥ 15 frames routinely, the pause is the normal case and open palm needs a different trigger than
 a hold, not a longer one.
+
+## 2026-09-14 Static poses need an upright hand and fingers no longer than a hand; a swipe restarts on a flip with a jump
+First dogfooding day: 4.5 h, hand in frame 39% of the time, 29 fires, 15 wrong, all captured with
+"Save Last 20 s As…" and committed as `recordings/*-dogfood-*`. Every static misfire passed the
+existing rules honestly: four fingers extended, palm facing the camera (span 0.39–0.56), still for
+15 frames, extent above the floor. What separated them from every positive fixture was geometry the
+rules did not look at.
+- Three were the right hand resting at the image-left edge with the fingers pointing down: middle
+  knuckle 0.5–1.0 palm lengths *below* the wrist. Every fixture pose has it ≥ 0.97 above, thumbs up
+  (edge-on) ≥ 0.46; a fifth of the idle fixture's hands are knuckle-down. `minUpright` 0.3.
+- Four open palms had fingertips 2.1–3.0 palm lengths from the wrist (medians 2.18–2.92 over their
+  holds); positives measure median 1.85–2.03, p95 ≤ 2.08. A finger is about one palm long, so the
+  palm was foreshortened and the fingers were not: the hand is pitched about its knuckle axis, which
+  the span gate (yaw) cannot see. `maxOpenTipReach` 2.1.
+- Two fists had tips at 0.81–0.90 palm lengths; fixture fists 0.61–0.77. `fistTipReach` 0.9 → 0.8.
+- Five of six swipes were Vision switching to the resting hand or a half-visible one (3–8 joints)
+  at the far side of the frame. Their steps were 0.26–0.39 frame widths at 2.6–5.9 fw/s across a
+  1–3 frame dropout, under the 6 fw/s teleport guard, and the flip came within the 0.1 s gap the old
+  handedness rule required. Inside real swipes Vision does flip handedness, but with steps of
+  0.03–0.05. `SwipeDetector.flipJump` 0.15 replaces the gap rule.
+Not taken: the sixth swipe misfire is the left hand reaching across the desk from an open pose at
+about 1 fw/s (`~/.config/sleight/recordings/none-reach-across-desk.jsonl`). Its palm shrinks by 1.34
+over the window as the hand moves away from the camera, but one real swipe shrinks by 1.11 and
+others vary by up to 1.96 through foreshortening, so no palm rule separates them on one example.
+**Revisit when:** the reach recurs in dogfooding (then a "palm shrinks while moving away" rule has
+two examples), or a positive fixture arrives with an open palm above tip reach 2.1.
+

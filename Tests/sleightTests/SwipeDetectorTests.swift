@@ -91,20 +91,23 @@ final class SwipeDetectorTests: XCTestCase {
         XCTAssertNil(fired)
     }
 
-    func testHandednessFlipAcrossGapIsAnotherHand() {
-        // Same motion with a 0.2s dropout in the middle: fires if the hand comes back with the same
-        // handedness, not if it comes back as the other hand.
-        func run(back: VNChirality) -> Gesture? {
+    func testHandednessFlipWithAJumpIsAnotherHand() {
+        // Vision flips handedness inside real swipes with steps of 0.03–0.05 frame widths, so a
+        // flip alone is motion. A flip combined with a jump is the other hand: the resting hand
+        // or a half-visible one on the far side of the frame (dogfood fixtures: 0.26–0.39).
+        func run(jump: CGFloat, back: VNChirality) -> Gesture? {
             var d = SwipeDetector()
             var fired: Gesture?
-            for i in 0...12 where !(4...9).contains(i) {
-                let side: VNChirality = i < 4 ? .left : back
-                if let g = d.push(CGPoint(x: 0.3 + 0.03 * CGFloat(i), y: 0.5), side: side, at: TimeInterval(i) / 30) { fired = g }
+            for i in 0...12 {
+                let side: VNChirality = i < 6 ? .left : back
+                let x = 0.3 + 0.03 * CGFloat(i) + (i >= 6 ? jump : 0)
+                if let g = d.push(CGPoint(x: x, y: 0.5), side: side, at: TimeInterval(i) / 30) { fired = g }
             }
             return fired
         }
-        XCTAssertEqual(run(back: .left), .swipeLeft)
-        XCTAssertNil(run(back: .right))
+        XCTAssertEqual(run(jump: 0, back: .right), .swipeLeft, "a flip without a jump is the same hand mid-swipe")
+        XCTAssertEqual(run(jump: 0.17, back: .left), .swipeLeft, "a jump alone under maxStepSpeed is still motion")
+        XCTAssertNil(run(jump: 0.17, back: .right), "a flip with a jump is another hand")
     }
 
     func testRecentSpeedReflectsMotion() {

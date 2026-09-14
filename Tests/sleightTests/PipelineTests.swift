@@ -32,11 +32,12 @@ final class PipelineTests: XCTestCase {
         for (mcp, pip, dip, tip, dx, ext) in fingers {
             let x = wrist.x + dx
             p[mcp] = CGPoint(x: x, y: 0.45)
-            // Wrist is at y 0.30, palm length 0.15. Extended: tip/PIP 1.55. Curled: tip/PIP 0.5,
+            // Wrist is at y 0.30, palm length 0.15. Extended: tip/PIP 1.32, tip 1.93 palm lengths
+            // (a finger is about one palm long; `maxOpenTipReach` caps it at 2.1). Curled: tip/PIP 0.5,
             // tip 0.67 palm lengths. Relaxed: tip/PIP 1.0. Hanging: tip/PIP 0.69 but tip 1.2 palms.
             let (py, dy, ty): (CGFloat, CGFloat, CGFloat)
             switch (ext, closed) {
-            case (true, _): (py, dy, ty) = (0.52, 0.58, 0.64)
+            case (true, _): (py, dy, ty) = (0.52, 0.56, 0.59)
             case (false, .curled): (py, dy, ty) = (0.50, 0.46, 0.40)
             case (false, .relaxed): (py, dy, ty) = (0.50, 0.51, 0.50)
             case (false, .hanging): (py, dy, ty) = (0.56, 0.53, 0.48)
@@ -101,6 +102,34 @@ final class PipelineTests: XCTestCase {
         XCTAssertNil(c.classify(hand(index: false, middle: false, ring: false, little: false, thumbOut: false, scaleY: 0.6)))
         XCTAssertNil(c.classify(hand(index: true, middle: true, ring: false, little: false, thumbOut: false, scaleY: 0.6)))
         XCTAssertEqual(c.classify(hand(index: false, middle: false, ring: false, little: false, thumbOut: true, thumbUp: true, scaleY: 0.6)), .thumbsUp)
+    }
+
+    func testFingersPointingDownAreRejected() {
+        let c = GestureClassifier()
+        // Mirror every pose about the wrist: knuckles below the wrist, as the right hand resting at
+        // the frame edge appears from above. Every pose including thumbs up is refused as angled.
+        for (pose, h) in [("openPalm", hand(index: true, middle: true, ring: true, little: true, thumbOut: true, scaleY: -1)),
+                          ("fist", hand(index: false, middle: false, ring: false, little: false, thumbOut: false, scaleY: -1)),
+                          ("twoFingers", hand(index: true, middle: true, ring: false, little: false, thumbOut: false, scaleY: -1)),
+                          ("thumbsUp", hand(index: false, middle: false, ring: false, little: false, thumbOut: true, thumbUp: true, scaleY: -1))] {
+            XCTAssertLessThan(c.features(h)?.upright ?? 1, 0, pose)
+            XCTAssertNil(c.classify(h), pose)
+            // A mirrored thumbs up already fails its thumb-up test, so only the others reach the gate.
+            if pose != "thumbsUp" { XCTAssertEqual(c.features(h)?.angled, true, pose) }
+        }
+    }
+
+    func testOverlongFingersAreNotAnOpenPalm() {
+        let c = GestureClassifier()
+        // A hand pitched about its knuckle axis foreshortens the palm but not the fingers, so the
+        // tips read farther than a finger is long; the span gate cannot see pitch.
+        let palm = hand(index: true, middle: true, ring: true, little: true, thumbOut: true)
+        var pts = palm.points
+        for tip in [sleight.Joint.indexTip, .middleTip, .ringTip, .littleTip] { pts[tip]!.y += 0.05 }   // tips 1.93 → 2.27 palm lengths
+        let pitched = Hand(chirality: palm.chirality, points: pts, confidence: 1)
+        XCTAssertGreaterThan(c.features(pitched)?.tipReach ?? 0, GestureClassifier.maxOpenTipReach)
+        XCTAssertNil(c.classify(pitched))
+        XCTAssertEqual(c.classify(palm), .openPalm)
     }
 
     func testClosedPosesNeedCurledFingers() {

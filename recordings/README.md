@@ -23,6 +23,14 @@ never still and camera-facing before the stroke. The takes that did show a wind-
 "return slowly" instructions and live outside the repo, because they fail as swipe fixtures by
 design.
 
+`*-dogfood-<HHMM>-*.jsonl` are "Save Last 20 s As…" captures from the first day of real use
+(2026-09-14, 4.5 h). Each `none` file holds one or two wrong fires named in the filename, about
+six seconds before the end; the `openPalm` and `swipeLeft` ones are deliberate gestures captured
+the same way. Together they cover the right hand resting at the frame edge (fingers down), the left
+hand pitched on the desk (fingertips 2.1–3.0 palm lengths out), a relaxed closed hand, and Vision
+switching to a second or half-visible hand mid-motion. One capture stayed out: a slow reach across
+the desk that fires swipeRight and that no rule separates from a swipe yet.
+
 `none-idle-10min.jsonl` (14 MB, 21k frames) is several times the rest of the set combined. It is
 12 minutes of typing, mousing, drinking, talking with hands, stretching and standing up, with a
 hand in frame two-thirds of the time. Its value is the duration: the static-gesture gates were

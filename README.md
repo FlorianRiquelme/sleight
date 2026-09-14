@@ -28,7 +28,10 @@ which static gestures are suppressed. Static gestures also need the hand's landm
 reach `minOpenExtent` (open palm, two fingers) or `minClosedExtent` (fist, thumbs up) of the frame,
 which admits a hand up to about one step back from the camera, and open palm, fist and two fingers
 need the palm facing the camera: a hand resting on the desk or waved while talking is seen at an
-angle, its palm length foreshortens, and the HUD marks it `ANGLED`.
+angle, its palm length foreshortens, and the HUD marks it `ANGLED`. Two more gates came out of a
+day of real use: every pose needs the knuckles above the wrist (a hand resting at the frame edge
+points its fingers down), and an open palm's fingertips may reach at most 2.1 palm lengths from the
+wrist (a hand pitched on the desk foreshortens the palm but not the fingers).
 
 ## Run
 
@@ -86,7 +89,7 @@ threshold and see exactly which misfires disappear or appear. With `--label <ges
 time (`none` for "nothing should fire"), replay also reports correct vs. wrong fires and exits non-zero if any are wrong, which makes a
 labeled recording usable as a regression test. `-v` prints every frame's finger flags, hold progress,
 palm length and speed. `--csv` prints one row per frame of what the current pipeline derives (pose,
-gating, speed, palm length, extent, span, hold, fire) and nothing else, for measuring across
+gating, speed, palm length, extent, span, fingertip reach, uprightness, hold, fire) and nothing else, for measuring across
 fixtures offline. `--config` replays against a different config file without touching the live one.
 
 "Save Last 20 s As…" in the menu writes the last 20 seconds the pipeline has seen to

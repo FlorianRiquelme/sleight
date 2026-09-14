@@ -17,8 +17,9 @@ struct HandFeatures {
     var extent: CGFloat          // landmark bounding-box diagonal, fraction of frame
     var palm: CGFloat            // wrist → middle MCP, fraction of frame; the unit every finger test is normalized by
     var span: CGFloat            // knuckle width (index MCP → little MCP) in palm lengths; see `maxPalmSpan`
+    var upright: CGFloat         // middle knuckle above the wrist, in palm lengths; see `minUpright`
     var tooSmall: Bool           // pose rejected because the hand is too far away
-    var angled: Bool             // pose rejected because the palm does not face the camera
+    var angled: Bool             // pose rejected because the palm does not face the camera or points down
     var thumb: Bool { thumbStraight && thumbClear }
     var extendedCount: Int { [index, middle, ring, little].filter { $0 }.count }
     /// Enough fingers extended to count as an open hand; swipes only track open hands.
@@ -56,10 +57,25 @@ struct GestureClassifier {
     static let curlRatio: CGFloat = 0.85
 
     /// A fist also keeps every fingertip inside the palm: within this many palm lengths of the
-    /// wrist (fixture fists 0.61–0.71). Fingers hanging over a mouse or keyboard curl past their
-    /// PIP too, but from beyond the knuckles (0.99–1.28). Thumbs up is exempt: the hand is turned
-    /// edge-on, so its folded fingers project past the knuckles (1.05–1.43).
-    static let fistTipReach: CGFloat = 0.9
+    /// wrist (fixture fists 0.61–0.77 at both distances). Fingers hanging over a mouse or keyboard
+    /// curl past their PIP too, but from beyond the knuckles (0.99–1.28), and a relaxed closed hand
+    /// resting on the desk sits between (dogfood fixtures: 0.81–0.90 for their whole hold). Thumbs
+    /// up is exempt: the hand is turned edge-on, so its folded fingers project past the knuckles
+    /// (1.05–1.43).
+    static let fistTipReach: CGFloat = 0.8
+
+    /// An open palm's fingertips reach at most this many palm lengths from the wrist: a finger is
+    /// about one palm long, so a camera-facing open hand measures 1.8–2.0 (fixtures at both
+    /// distances: median 1.85–2.03, p95 ≤ 2.08). A hand pitched about its knuckle axis (resting on
+    /// the desk, seen from above) foreshortens the palm but not the fingers and reads 2.1–3.0; the
+    /// span gate cannot see pitch, only yaw. Dogfood open-palm misfires: median 2.18–2.92.
+    static let maxOpenTipReach: CGFloat = 2.1
+
+    /// The middle knuckle must sit this many palm lengths above the wrist: a gesture made toward
+    /// the camera is upright. Every fixture pose measures ≥ 0.97, thumbs up (edge-on) ≥ 0.46. The
+    /// right hand resting at the frame edge points its fingers down (dogfood: -0.5 to -1.0) and
+    /// a fifth of the idle fixture's hands do too.
+    static let minUpright: CGFloat = 0.3
 
     func classify(_ hand: Hand) -> Gesture? { features(hand)?.gesture }
 
@@ -95,11 +111,11 @@ struct GestureClassifier {
                              thumbStraight: thumbStraight, thumbClear: thumbClear,
                              thumbUp: thumbTip.y > indexMCP.y + 0.3 * size,
                              extent: hand.extent, palm: size, span: dist(indexMCP, littleMCP) / size,
-                             tooSmall: false, angled: false)
+                             upright: (midMCP.y - wrist.y) / size, tooSmall: false, angled: false)
         let n = f.extendedCount
         // Open palm ignores the thumb: a relaxed palm keeps it alongside the index (measured
         // 0.26–0.47 hand-widths from the index MCP, same range as a fist), so it carries no signal.
-        if n == 4 { f.gesture = .openPalm }
+        if n == 4 && tipReach <= Self.maxOpenTipReach { f.gesture = .openPalm }
         else if f.curled == 4 && !f.thumb && tipReach < Self.fistTipReach { f.gesture = .fist }
         else if ext[0] && ext[1] && curl[2] && curl[3] { f.gesture = .twoFingers }
         else if f.curled == 4 && f.thumb && f.thumbUp { f.gesture = .thumbsUp }
@@ -107,7 +123,7 @@ struct GestureClassifier {
         if let g = f.gesture {
             let floor = (g == .openPalm || g == .twoFingers) ? minOpenExtent : minClosedExtent
             if f.extent < floor { f.tooSmall = true; f.gesture = nil }
-            else if g != .thumbsUp && f.span > Self.maxPalmSpan { f.angled = true; f.gesture = nil }
+            else if (g != .thumbsUp && f.span > Self.maxPalmSpan) || f.upright < Self.minUpright { f.angled = true; f.gesture = nil }
         }
         return f
     }

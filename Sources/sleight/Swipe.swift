@@ -10,17 +10,19 @@ import Vision
 /// the desk it alternates between them, so the palm center teleports. A swipe therefore runs
 /// from the oldest sample with spread fingers in the window (real swipes wind up open and lose
 /// finger joints only in the fast phase; the hands on the desk are closed or half out of frame),
-/// and the buffer restarts on a step faster than any hand moves, or when the hand comes back from
-/// a detection gap with the other handedness (Vision flips handedness frame to frame during brisk
-/// motion, but only a different hand comes back flipped after a gap). Speed still uses every
-/// sample, so a closed hand in motion gates the static poses.
+/// and the buffer restarts on a step faster than any hand moves, or on a handedness flip combined
+/// with a jump (Vision flips handedness frame to frame during brisk motion, but the hand barely
+/// moves between those frames; a different hand appears elsewhere in the frame). Speed still uses
+/// every sample, so a closed hand in motion gates the static poses.
 struct SwipeDetector {
     var minDistance: CGFloat = 0.25      // fraction of frame width
     var window: TimeInterval = 0.5       // seconds the motion may take
     var maxVerticalRatio: CGFloat = 0.7  // |dy| must stay below this * |dx|; fixtures show real swipes arc up to ~0.5
     var maxStepSpeed: CGFloat = 6        // frame widths/s between consecutive samples; fixture swipes peak at 4.7,
                                          // a switch to the other hand shows as 6.5–9.2
-    var gap: TimeInterval = 0.1          // a handedness flip across a longer detection gap is the other hand
+    var flipJump: CGFloat = 0.15         // frame widths; a handedness flip with a step this large is the other hand.
+                                         // Vision flips handedness inside real swipes with steps of 0.03–0.05;
+                                         // switching to the resting hand or a half-visible one steps 0.26–0.39
     var returnLockout: TimeInterval = 1.5 // seconds after a swipe during which the opposite direction is the
                                          // hand coming back (fixture returns fire 1.0s after the swipe)
 
@@ -34,8 +36,9 @@ struct SwipeDetector {
     /// `open`: the hand has at least three fingers extended. `side`: Vision's handedness.
     mutating func push(_ p: CGPoint, open: Bool = true, side: VNChirality = .unknown, at t: TimeInterval) -> Gesture? {
         if let last = samples.last, t > last.t {
-            let teleport = hypot(p.x - last.p.x, p.y - last.p.y) / CGFloat(t - last.t) > maxStepSpeed
-            let switched = side != last.side && side != .unknown && last.side != .unknown && t - last.t > gap
+            let step = hypot(p.x - last.p.x, p.y - last.p.y)
+            let teleport = step / CGFloat(t - last.t) > maxStepSpeed
+            let switched = side != last.side && side != .unknown && last.side != .unknown && step > flipJump
             restarted = teleport || switched   // not motion: a different hand
             if restarted { samples.removeAll() }
         }
