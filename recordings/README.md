@@ -16,6 +16,12 @@ between swipes: that is an open palm by definition and replay will count it as a
 Swipe, then drop or close the hand before bringing it back. `scripts/record-fixtures.sh` records
 the far set with timed takes.
 
+`swipe*-natural.jsonl` are swipes made the way you swipe while working, with no instruction to
+pause or return slowly (#4). Neither take has a single frame classified as openPalm: the hand is
+never still and camera-facing before the stroke. The takes that did show a wind-up pause were
+"return slowly" instructions and live outside the repo, because they fail as swipe fixtures by
+design.
+
 `none-idle-10min.jsonl` (14 MB, 21k frames) is several times the rest of the set combined. It is
 12 minutes of typing, mousing, drinking, talking with hands, stretching and standing up, with a
 hand in frame two-thirds of the time. Its value is the duration: the static-gesture gates were
