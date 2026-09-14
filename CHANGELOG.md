@@ -5,6 +5,8 @@ first within a section.
 
 ## Unreleased
 
+## 0.1.0 - 2026-09-14
+
 ### Fixed
 - A swipe right after a static gesture is no longer lost to that gesture's cooldown: an open hand
   that pauses before the stroke fires openPalm, and the swipe half a second later now fires too.
