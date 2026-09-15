@@ -2,6 +2,10 @@ import Foundation
 
 /// Everything between "here is a hand (or not) at time t" and "a gesture fired".
 /// Camera-free so recordings can be replayed through it deterministically.
+///
+/// Static poses are gated on stillness and fire once. The grab pose is different: firing it
+/// *starts* tracking instead of gating on motion, and any non-open hand keeps the drag alive, so
+/// a fist that loosens mid-move still drags. Opening the hand drops it.
 final class Pipeline {
     struct Result {
         var fired: Gesture?
@@ -11,6 +15,8 @@ final class Pipeline {
         var trail: [CGPoint]
         var candidate: Gesture?
         var holdCount: Int
+        var drag: CGPoint?     // while grabbing: palm displacement since the grab, user's frame (+x right, +y up), frame fractions
+        var dropped: Bool      // true on the single frame the grab ends; `drag` then holds the final displacement
     }
 
     private(set) var config: Config
@@ -21,6 +27,13 @@ final class Pipeline {
     private var lastSwipe: TimeInterval = -.infinity   // swipes only
     private var primeAfterSwipe = false
     private(set) var handVisible = false
+
+    /// Vision drops a hand for 1–8 frames in brisk motion (docs/decisions.md); 0.7s outlives that.
+    /// A hand gone longer than this ends the grab with zero travel, which the mover treats as a
+    /// cancel: the fist fixtures end by lowering the hand out of frame, and that must not move
+    /// anything. Only an open hand commits a drop.
+    static let grabLostSeconds: TimeInterval = 0.7
+    private var grab: (origin: CGPoint, last: CGPoint, lastSeen: TimeInterval)?
 
     init(config: Config) {
         self.config = config
@@ -49,6 +62,7 @@ final class Pipeline {
         lastSwipe = -.infinity
         primeAfterSwipe = false
         handVisible = false
+        grab = nil
     }
 
     var holdFrames: Int { stabilizer.holdFrames }
@@ -56,11 +70,57 @@ final class Pipeline {
     /// Classifier output for a hand regardless of gating; `Result.features` is nil while gated.
     func features(_ hand: Hand) -> HandFeatures? { classifier.features(hand) }
 
+    /// Ending a grab: the open hand that releases the window is part of the drop, mirroring
+    /// `primeAfterSwipe`; the cooldown also restarts so static gestures cool down after a drop.
+    private func endGrab(at t: TimeInterval) {
+        grab = nil
+        swipe.reset()
+        stabilizer.prime(.openPalm)
+        lastFire = t
+    }
+
+    private func delta(_ p: CGPoint, from origin: CGPoint) -> CGPoint {
+        // Vision frames are not mirrored: user-right is image-left, so x is negated (same
+        // convention as SwipeDetector; docs/decisions.md "Swipe direction follows the hand").
+        // Vision y is already up, so y is unchanged.
+        CGPoint(x: -(p.x - origin.x), y: p.y - origin.y)
+    }
+
     func process(_ hand: Hand?, at t: TimeInterval) -> Result {
         // Swipe samples are kept across dropouts on purpose; they age out by time.
         handVisible = hand != nil
 
-        var r = Result(fired: nil, features: nil, gated: false, speed: 0, trail: [], candidate: nil, holdCount: 0)
+        var r = Result(fired: nil, features: nil, gated: false, speed: 0, trail: [], candidate: nil, holdCount: 0, drag: nil, dropped: false)
+
+        if var g = grab {
+            r.gated = true
+            r.trail = []
+            r.candidate = nil
+            r.holdCount = 0
+            if let center = hand?.palmCenter {
+                let features = classifier.features(hand!)
+                if features?.isOpen == true {
+                    r.dropped = true
+                    r.drag = delta(center, from: g.origin)
+                    endGrab(at: t)
+                } else {
+                    g.last = center
+                    g.lastSeen = t
+                    grab = g
+                    r.drag = delta(center, from: g.origin)
+                }
+            } else {
+                if t - g.lastSeen > Pipeline.grabLostSeconds {
+                    r.dropped = true
+                    r.drag = .zero   // cancel, see grabLostSeconds
+                    endGrab(at: t)
+                } else {
+                    r.drag = delta(g.last, from: g.origin)
+                }
+            }
+            return r
+        }
+
         let features = hand.flatMap(classifier.features)
         var swiped = false
         if let center = hand?.palmCenter {
@@ -84,6 +144,10 @@ final class Pipeline {
                 primeAfterSwipe = false
             } else if let g = stabilizer.push(r.features?.gesture) {
                 r.fired = fire(g, at: t)
+                if r.fired == config.grabGesture, let center = hand?.palmCenter {
+                    grab = (origin: center, last: center, lastSeen: t)
+                    r.drag = .zero
+                }
             }
         } else {
             r.gated = true

@@ -20,6 +20,7 @@ enum ActionRunner {
         case .media(let name): try pressMedia(name)
         case .shell(let cmd): shell(cmd)
         case .spotify(let cmd): try spotify(cmd)
+        case .window: break   // handled by Engine's grab/drag, not a one-shot action
         case .none: break
         }
     }

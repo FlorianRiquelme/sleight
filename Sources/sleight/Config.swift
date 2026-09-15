@@ -8,6 +8,7 @@ enum Action: Codable, Equatable {
     case media(String)
     case shell(String)
     case spotify(String)
+    case window
     case none
 
     private enum K: String, CodingKey { case type, keys, key, command }
@@ -19,6 +20,7 @@ enum Action: Codable, Equatable {
         case "media": self = .media(try c.decode(String.self, forKey: .key))
         case "shell": self = .shell(try c.decode(String.self, forKey: .command))
         case "spotify": self = .spotify(try c.decode(String.self, forKey: .command))
+        case "window": self = .window
         case "none": self = .none
         case let t: throw DecodingError.dataCorruptedError(forKey: .type, in: c, debugDescription: "unknown action type \(t)")
         }
@@ -31,6 +33,7 @@ enum Action: Codable, Equatable {
         case .media(let k): try c.encode("media", forKey: .type); try c.encode(k, forKey: .key)
         case .shell(let s): try c.encode("shell", forKey: .type); try c.encode(s, forKey: .command)
         case .spotify(let s): try c.encode("spotify", forKey: .type); try c.encode(s, forKey: .command)
+        case .window: try c.encode("window", forKey: .type)
         case .none: try c.encode("none", forKey: .type)
         }
     }
@@ -41,6 +44,7 @@ enum Action: Codable, Equatable {
         case .media(let k): return "media \(k)"
         case .shell(let s): return "shell \(s.prefix(40))"
         case .spotify(let s): return "spotify \(s)"
+        case .window: return "window grab"
         case .none: return "none"
         }
     }
@@ -57,6 +61,7 @@ struct Config: Codable {
     var minClosedExtent: Double     // fist / thumbs up need this much; a fist is compact, so it is lower
     var mappings: [String: Action]
     var notifyOnFire: Bool          // macOS notification on every fire, so silent mappings are still visible
+    var windowDragGain: Double      // screen widths the window moves per frame width the hand travels
 
     static let path = FileManager.default.homeDirectoryForCurrentUser
         .appendingPathComponent(".config/sleight/config.json")
@@ -72,23 +77,25 @@ struct Config: Codable {
         minClosedExtent: 0.11,   // deliberate fist: 0.19 at arm's length, 0.12 one step back
         mappings: [
             Gesture.openPalm.rawValue: .spotify("playpause"),
-            Gesture.fist.rawValue: .media("mute"),
+            // fist grabs the front window (#5); map to media mute to get the old behaviour
+            Gesture.fist.rawValue: .window,
             Gesture.twoFingers.rawValue: .spotify("next"),
             Gesture.thumbsUp.rawValue: .media("volumeup"),
             // Natural direction: content follows the hand. Swipe left → space on the right.
             Gesture.swipeLeft.rawValue: .key("ctrl+right"),
             Gesture.swipeRight.rawValue: .key("ctrl+left"),
         ],
-        notifyOnFire: true
+        notifyOnFire: true,
+        windowDragGain: 2.0
     )
 
-    private enum K: String, CodingKey { case camera, holdFrames, cooldownSeconds, swipeMinDistance, swipeWindowSeconds, stillSpeed, minOpenExtent, minClosedExtent, mappings, notifyOnFire }
+    private enum K: String, CodingKey { case camera, holdFrames, cooldownSeconds, swipeMinDistance, swipeWindowSeconds, stillSpeed, minOpenExtent, minClosedExtent, mappings, notifyOnFire, windowDragGain }
 
-    init(camera: String?, holdFrames: Int, cooldownSeconds: Double, swipeMinDistance: Double, swipeWindowSeconds: Double, stillSpeed: Double, minOpenExtent: Double, minClosedExtent: Double, mappings: [String: Action], notifyOnFire: Bool) {
+    init(camera: String?, holdFrames: Int, cooldownSeconds: Double, swipeMinDistance: Double, swipeWindowSeconds: Double, stillSpeed: Double, minOpenExtent: Double, minClosedExtent: Double, mappings: [String: Action], notifyOnFire: Bool, windowDragGain: Double) {
         self.camera = camera; self.holdFrames = holdFrames; self.cooldownSeconds = cooldownSeconds
         self.swipeMinDistance = swipeMinDistance; self.swipeWindowSeconds = swipeWindowSeconds
         self.stillSpeed = stillSpeed; self.minOpenExtent = minOpenExtent; self.minClosedExtent = minClosedExtent; self.mappings = mappings
-        self.notifyOnFire = notifyOnFire
+        self.notifyOnFire = notifyOnFire; self.windowDragGain = windowDragGain
     }
 
     init(from d: Decoder) throws {
@@ -105,12 +112,16 @@ struct Config: Codable {
         // Gestures missing from the file get their default; map to {"type":"none"} to disable one.
         mappings = def.mappings.merging(try c.decodeIfPresent([String: Action].self, forKey: .mappings) ?? [:]) { $1 }
         notifyOnFire = try c.decodeIfPresent(Bool.self, forKey: .notifyOnFire) ?? def.notifyOnFire
+        windowDragGain = try c.decodeIfPresent(Double.self, forKey: .windowDragGain) ?? def.windowDragGain
     }
 
     func action(for g: Gesture) -> Action? {
         if case .none? = mappings[g.rawValue] { return nil }
         return mappings[g.rawValue]
     }
+
+    /// The static gesture mapped to `.window`, i.e. the grab pose; nil disables dragging.
+    var grabGesture: Gesture? { mappings.first { $0.value == .window }.flatMap { Gesture(rawValue: $0.key) } }
 
     /// Loads the config, writing the default file first if none exists.
     static func load() throws -> Config {

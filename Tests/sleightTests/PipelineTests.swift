@@ -210,18 +210,22 @@ final class PipelineTests: XCTestCase {
     }
 
     func testCooldownUsesFrameTime() {
-        let p = Pipeline(config: config)
+        // Fist is the default grab pose (#5): un-map it back to a plain static gesture so this test
+        // exercises cooldown mechanics, not grab/drag semantics.
+        var cfg = config
+        cfg.mappings["fist"] = .media("mute")
+        let p = Pipeline(config: cfg)
         let fist = hand(index: false, middle: false, ring: false, little: false, thumbOut: false)
         let palm = hand(index: true, middle: true, ring: true, little: true, thumbOut: true)
         var fired: [Gesture] = []
-        let n = config.holdFrames + 2
+        let n = cfg.holdFrames + 2
         // n frames fist then n frames palm at 30fps (~1.1s total) → palm lands inside the 1s cooldown.
         for i in 0..<(2 * n) {
             if let g = p.process(i < n ? fist : palm, at: Double(i) / 30).fired { fired.append(g) }
         }
         XCTAssertEqual(fired, [.fist])
         // Same sequence at 5fps (~6.8s total) → both fire.
-        let p2 = Pipeline(config: config)
+        let p2 = Pipeline(config: cfg)
         fired = []
         for i in 0..<(2 * n) {
             if let g = p2.process(i < n ? fist : palm, at: Double(i) * 0.2).fired { fired.append(g) }

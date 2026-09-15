@@ -20,6 +20,7 @@ struct DebugFrame {
     let holdFrames: Int
     let fps: Int
     let lastFired: (gesture: Gesture, at: Date)?
+    let drag: CGPoint?            // palm displacement since the grab while a window is held (user's frame)
 }
 
 /// Camera → hand pose → Pipeline → actions. Owns the camera and the Vision detector.
@@ -35,6 +36,8 @@ final class Engine {
     private var lastFired: (gesture: Gesture, at: Date)?
 
     var onGesture: ((Gesture) -> Void)?
+    var onDrag: ((CGPoint) -> Void)?      // every frame while the grab pose holds a window
+    var onDrop: ((CGPoint) -> Void)?      // once, with the final displacement
     var onHand: ((Bool) -> Void)?
     var onFPS: ((Int) -> Void)?
     var onRaw: ((Hand, Gesture?) -> Void)?
@@ -83,6 +86,10 @@ final class Engine {
             lastFired = (g, Date())
             onGesture?(g)
         }
+        // The grab frame itself carries drag = .zero and is reported through onGesture only.
+        if let d = r.drag, r.fired == nil {
+            if r.dropped { onDrop?(d) } else { onDrag?(d) }
+        }
         recorder?.append(hand: hand, at: t, result: r)
         recent.append(hand: hand, at: t, result: r)
         usage?.note(hand: hand != nil)
@@ -97,7 +104,7 @@ final class Engine {
                 trail: r.trail, swipeMinDistance: CGFloat(config.swipeMinDistance),
                 stillSpeed: CGFloat(config.stillSpeed), minOpenExtent: CGFloat(config.minOpenExtent), minClosedExtent: CGFloat(config.minClosedExtent),
                 candidate: r.candidate, holdCount: r.holdCount, holdFrames: pipeline.holdFrames,
-                fps: lastFPS, lastFired: lastFired))
+                fps: lastFPS, lastFired: lastFired, drag: r.drag))
         }
 
         let now = Date()

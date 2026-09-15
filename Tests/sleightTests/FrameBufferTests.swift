@@ -9,7 +9,7 @@ final class FrameBufferTests: XCTestCase {
             sleight.Joint.indexMCP: CGPoint(x: 0.5, y: 0.5),
             sleight.Joint.middleMCP: CGPoint(x: 0.5, y: 0.5),
         ], confidence: 1)
-        let result = Pipeline.Result(fired: nil, features: nil, gated: false, speed: 0, trail: [], candidate: nil, holdCount: 0)
+        let result = Pipeline.Result(fired: nil, features: nil, gated: false, speed: 0, trail: [], candidate: nil, holdCount: 0, drag: nil, dropped: false)
 
         let buffer = FrameBuffer(seconds: 20)
         let ts = (0..<900).map { Double($0) / 30 }

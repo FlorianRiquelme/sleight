@@ -52,6 +52,18 @@ if let name = flagValue("--fire") {
     exit(0)
 }
 
+// sleight --window print | left | right | top | bottom | fill | topLeft | topRight | bottomLeft | bottomRight
+if let what = flagValue("--window") {
+    ActionRunner.ensureAccessibility()
+    func describe(_ f: CGRect) -> String { String(format: "x=%.0f y=%.0f w=%.0f h=%.0f", f.minX, f.minY, f.width, f.height) }
+    guard let (el, before) = WindowMover.focusedWindow() else { log("no focused window (is Accessibility granted?)"); exit(1) }
+    if what == "print" { print(describe(before)); exit(0) }
+    guard let zone = WindowZone(rawValue: what) else { log("unknown zone '\(what)'. one of: print, \(WindowZone.allCases.map(\.rawValue).joined(separator: ", "))"); exit(2) }
+    _ = WindowMover.snapFocusedWindow(to: zone)
+    log("window \(describe(before)) → \(zone.label) \(WindowMover.frame(of: el).map(describe) ?? "?")")
+    exit(0)
+}
+
 let wanted = flagValue("--camera") ?? config.camera
 let device = wanted.flatMap({ n in devices.first { $0.localizedName.localizedCaseInsensitiveContains(n) } }) ?? devices.first
 if device == nil {
@@ -75,19 +87,40 @@ engine.onRaw = { h, raw in
     }
 }
 let firesLog = Config.path.deletingLastPathComponent().appendingPathComponent("fires.log")
-let fireGesture: (Gesture) -> Void = { g in
-    let action = engine.config.action(for: g)
-    let summary = action?.summary ?? "no action"
-    log("GESTURE  \(g.rawValue) → \(summary)\(dryRun ? " (dry run)" : "")")
-    // One line per fire, wall clock, so a day can be reviewed next to usage.csv and the misfire captures.
+/// One line per fire, wall clock, so a day can be reviewed next to usage.csv and the misfire captures.
+func logFire(_ what: String, _ summary: String) {
+    log("GESTURE  \(what) → \(summary)\(dryRun ? " (dry run)" : "")")
     let f = DateFormatter(); f.dateFormat = "yyyy-MM-dd'T'HH:mm:ss"
     if !FileManager.default.fileExists(atPath: firesLog.path) { FileManager.default.createFile(atPath: firesLog.path, contents: nil) }
     if let h = try? FileHandle(forWritingTo: firesLog) {
-        h.seekToEndOfFile(); h.write("\(f.string(from: Date()))  \(g.rawValue) → \(summary)\n".data(using: .utf8)!); try? h.close()
+        h.seekToEndOfFile(); h.write("\(f.string(from: Date()))  \(what) → \(summary)\n".data(using: .utf8)!); try? h.close()
     }
-    if engine.config.notifyOnFire { ActionRunner.notify(title: "sleight: \(g.rawValue)", body: summary) }
+    if engine.config.notifyOnFire { ActionRunner.notify(title: "sleight: \(what)", body: summary) }
+}
+// Window grab: AX calls belong on the main thread; the pipeline runs on the camera queue.
+let mover = WindowMover()
+let fireGesture: (Gesture) -> Void = { g in
+    let action = engine.config.action(for: g)
+    logFire(g.rawValue, action?.summary ?? "no action")
     guard !dryRun, let action else { return }
+    if action == .window {
+        mover.gain = CGFloat(engine.config.windowDragGain)
+        DispatchQueue.main.async { if !mover.grab() { log("window grab: no focused window") } }
+        return
+    }
     do { try ActionRunner.run(action) } catch { log("action failed: \(error)") }
+}
+engine.onDrag = { d in
+    guard !dryRun else { return }
+    DispatchQueue.main.async { mover.drag(d) }
+}
+engine.onDrop = { d in
+    let travel = String(format: "dx %+.2f dy %+.2f", d.x, d.y)
+    if dryRun { logFire("drop", travel); return }
+    DispatchQueue.main.async {
+        let zone = mover.drop(d)
+        logFire("drop", zone.map { "window → \($0.label)" } ?? "window restored (\(travel))")
+    }
 }
 
 if !noUI {

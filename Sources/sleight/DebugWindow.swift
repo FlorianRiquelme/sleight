@@ -147,6 +147,9 @@ final class DebugView: NSView {
         }
         lines.append(String(format: "speed:  %.2f / still %.2f%@", f.speed, f.stillSpeed, swipe))
 
+        if let d = f.drag {
+            lines.append(String(format: "grab:   dx %+.2f  dy %+.2f   open the hand to drop", d.x, d.y))
+        }
         var status = "fps:    \(f.fps)"
         if let last = f.lastFired {
             status += String(format: "   fired %@ %.1fs ago", last.gesture.rawValue, Date().timeIntervalSince(last.at))

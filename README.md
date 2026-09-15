@@ -1,7 +1,8 @@
 # Sleight
 
 Sleight of hand for your Mac. A menu bar app that watches your webcam for hand gestures and
-fires shortcuts: wave a palm to pause Spotify, swipe to switch Spaces, fist to mute.
+fires shortcuts: wave a palm to pause Spotify, swipe to switch Spaces, grab a window with a fist
+and drop it into place.
 On-device only (Apple Vision), no frames stored or sent anywhere.
 
 ## Gestures
@@ -9,7 +10,7 @@ On-device only (Apple Vision), no frames stored or sent anywhere.
 | Gesture | Default action |
 |---|---|
 | ✋ open palm | Spotify play/pause |
-| ✊ fist | media mute |
+| ✊ fist | grab the front window; move it; open the hand to drop (see below) |
 | ✌️ two fingers | Spotify next track |
 | 👍 thumbs up | media volume up (one step per hold) |
 | 👈 swipe left | `ctrl+right` → space to the right |
@@ -33,6 +34,25 @@ day of real use: every pose needs the knuckles above the wrist (a hand resting a
 points its fingers down), and an open palm's fingertips may reach at most 2.1 palm lengths from the
 wrist (a hand pitched on the desk foreshortens the palm but not the fingers).
 
+## Window placement
+
+A still fist grabs the frontmost app's focused window. While the hand stays closed the window
+follows it live, in your frame of reference, at `windowDragGain` screen widths per frame width of
+hand travel (default 2: half a frame of hand movement crosses the screen). Open the hand to drop.
+The window snaps to the cell its center landed in on a 3×3 grid of the screen it is over:
+
+| | | |
+|---|---|---|
+| top-left quarter | top half | top-right quarter |
+| left half | fill | right half |
+| bottom-left quarter | bottom half | bottom-right quarter |
+
+Drag the center onto another display and it snaps there. A drop with almost no travel (under 0.05
+frame widths) puts the window back where it was, so an accidental fist costs nothing, and so does
+lowering the hand out of frame instead of opening it (0.7 s without a hand cancels the grab). The grab pose is whichever static gesture is
+mapped to the `window` action; map fist to `{"type":"media","key":"mute"}` to get mute back and
+`twoFingers` to `window` to grab with two fingers instead.
+
 ## Run
 
 ```sh
@@ -44,6 +64,7 @@ swift build
 .build/debug/sleight --list          # cameras
 .build/debug/sleight --camera iphone # pick camera by name substring
 .build/debug/sleight --fire fist     # run one mapping once (test actions)
+.build/debug/sleight --window print  # frame of the front window; --window left|right|top|bottom|fill|topLeft|... snaps it
 .build/debug/sleight --record out.jsonl --label fist   # record landmarks while you perform a gesture
 .build/debug/sleight replay out.jsonl [-v | --csv] [--config other.json]   # re-run a recording offline
 ./scripts/bundle.sh                     # build/sleight.app
@@ -72,6 +93,7 @@ problems instead of exiting; only `--no-ui` exits non-zero on them.
 - hand skeleton, green = finger counted as extended, red = curled, yellow = hand moving so static poses are gated
 - blue dot = palm center, cyan trail = the swipe detector's sample window
 - HUD: current pose and per-finger flags including the three thumb tests, hold progress toward `holdFrames`,
+  the window drag offset while a grab is active,
   palm speed vs `stillSpeed` with a swipe distance meter, fps, and the last fired gesture
 
 Frame conversion for the preview only runs while the window is open.
@@ -89,7 +111,7 @@ threshold and see exactly which misfires disappear or appear. With `--label <ges
 time (`none` for "nothing should fire"), replay also reports correct vs. wrong fires and exits non-zero if any are wrong, which makes a
 labeled recording usable as a regression test. `-v` prints every frame's finger flags, hold progress,
 palm length and speed. `--csv` prints one row per frame of what the current pipeline derives (pose,
-gating, speed, palm length, extent, span, fingertip reach, uprightness, hold, fire) and nothing else, for measuring across
+gating, speed, palm length, extent, span, fingertip reach, uprightness, hold, fire, drag offset, drop) and nothing else, for measuring across
 fixtures offline. `--config` replays against a different config file without touching the live one.
 
 "Save Last 20 s As…" in the menu writes the last 20 seconds the pipeline has seen to
@@ -121,13 +143,14 @@ prints overall averages/peaks and a per-hour table from the log.
   "minClosedExtent": 0.11,
   "mappings": {
     "openPalm":   { "type": "spotify", "command": "playpause" },
-    "fist":       { "type": "media",   "key": "mute" },
+    "fist":       { "type": "window" },
     "twoFingers": { "type": "spotify", "command": "next" },
     "thumbsUp":   { "type": "media",   "key": "volumeup" },
     "swipeLeft":  { "type": "key",     "keys": "ctrl+right" },
     "swipeRight": { "type": "key",     "keys": "ctrl+left" }
   },
-  "notifyOnFire": true
+  "notifyOnFire": true,
+  "windowDragGain": 2
 }
 ```
 
@@ -142,6 +165,7 @@ Action types:
 - `media` — system media keys, go to whatever app is the current player: `playpause`, `next`, `previous`, `mute`, `volumeup`, `volumedown`, `brightnessup`, `brightnessdown`
 - `key` — modifiers `cmd`, `shift`, `alt`, `ctrl`, `fn` plus a key: letters, digits, `space`, `return`, `tab`, `esc`, arrows, `f1`–`f12`, punctuation
 - `shell` — run in `/bin/zsh -lc`
+- `window` — grab the front window and drag it (one gesture at most; see Window placement)
 - `none` — disable a gesture
 
 Gestures missing from `mappings` get their defaults.

@@ -225,3 +225,29 @@ others vary by up to 1.96 through foreshortening, so no palm rule separates them
 **Revisit when:** the reach recurs in dogfooding (then a "palm shrinks while moving away" rule has
 two examples), or a positive fixture arrives with an open palm above tip reach 2.1.
 
+
+## 2026-09-15 Fist grabs the front window; a held closed hand tracks through motion; drop snaps to a 3×3 zone grid
+Window placement is the first continuous use of the hand (#5). Every earlier gesture was an event;
+static poses were even gated on stillness, so "hold a pose while moving" did not exist. The grab
+adds it as a mode, not a new pose: the pose mapped to the `window` action (default fist) fires as
+before, and from that frame `Pipeline` reports the palm center's displacement every frame until the
+hand opens. Any non-open hand keeps the grab, because Vision loosens a fist's joints during motion
+and a strict fist test would drop the window mid-move. The swipe detector and the stabilizer are
+bypassed while dragging, and the release open hand is primed like the settle after a swipe.
+The window moves live through the Accessibility API, which the app already holds for key events,
+with a gain of 2 screen widths per frame width so half a frame of hand travel crosses the screen.
+The drop does not place the window where the hand left it: palm-center jitter is a few pixels at
+frame scale and Vision drops joints in fast motion, so free placement would land a few points off
+every time. Instead the window's dragged center picks a cell on a 3×3 grid of the screen it is
+over (quarters in the corners, halves on the edges, fill in the middle), which is also the whole
+vocabulary Swish offers. A center dragged onto another display snaps on that display. Travel
+under 0.05 frame widths restores the original frame, so a fist that fires by accident and opens
+again costs nothing. Losing the hand for 0.7 s also restores it: brisk-motion dropouts are 1–8
+frames, so 0.7 s means the hand is gone, and the fist fixtures show how that happens: the hand
+lowers out of frame after the pose, with 0.17–0.25 of downward travel that would have snapped the
+window to the bottom half. Only an open hand commits a drop.
+Cost: fist no longer mutes by default; `{"type":"media","key":"mute"}` restores it, and the grab
+pose follows whichever static gesture is mapped to `window`.
+**Revisit if:** a real drop lands in the wrong cell (measure the dragged center against the grid
+before touching the gain), or a fixture shows the hand opening within the first frames of a move
+because a loose fist reads as three extended fingers; then the release test needs a hysteresis.

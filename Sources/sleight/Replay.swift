@@ -14,7 +14,7 @@ enum Replay {
         var fires: [Fire] = []
         var handFrames = 0
 
-        if csv { print("t,hand,pose,gated,speed,palm,extent,span,tips,upright,hold,candidate,fired") }
+        if csv { print("t,hand,pose,gated,speed,palm,extent,span,tips,upright,hold,candidate,fired,dragx,dragy,drop") }
         for f in frames {
             let hand = f.hand?.hand
             if hand != nil { handFrames += 1 }
@@ -24,13 +24,17 @@ enum Replay {
                 func n(_ v: CGFloat?) -> String { v.map { String(format: "%.4f", Double($0)) } ?? "" }
                 print([String(format: "%.4f", f.t), hand == nil ? "0" : "1", r.features?.gesture?.rawValue ?? "",
                        r.gated ? "1" : "0", String(format: "%.4f", Double(r.speed)), n(ft?.palm), n(ft?.extent), n(ft?.span),
-                       n(ft?.tipReach), n(ft?.upright), "\(r.holdCount)", r.candidate?.rawValue ?? "", r.fired?.rawValue ?? ""].joined(separator: ","))
+                       n(ft?.tipReach), n(ft?.upright), "\(r.holdCount)", r.candidate?.rawValue ?? "", r.fired?.rawValue ?? "",
+                       r.drag.map { String(format: "%.4f", Double($0.x)) } ?? "", r.drag.map { String(format: "%.4f", Double($0.y)) } ?? "",
+                       r.dropped ? "1" : "0"].joined(separator: ","))
             } else if verbose, let ft = r.features {
                 print(String(format: "%7.3f  pose=%-10@ I%d M%d R%d L%d curl=%d tips=%.2f T%d(s%d c%d u%d) ext=%.2f palm=%.2f span=%.2f up=%.2f%@ hold=%d/%d speed=%.2f%@",
                              f.t, ft.gesture?.rawValue ?? "-", ft.index ? 1 : 0, ft.middle ? 1 : 0, ft.ring ? 1 : 0, ft.little ? 1 : 0, ft.curled, Double(ft.tipReach),
                              ft.thumb ? 1 : 0, ft.thumbStraight ? 1 : 0, ft.thumbClear ? 1 : 0, ft.thumbUp ? 1 : 0,
                              Double(ft.extent), Double(ft.palm), Double(ft.span), Double(ft.upright), ft.tooSmall ? " SMALL" : ft.angled ? " ANGLED" : "",
                              r.holdCount, pipeline.holdFrames, Double(r.speed), r.gated ? " GATED" : ""))
+            } else if verbose, let d = r.drag {
+                print(String(format: "%7.3f  DRAG dx=%+.3f dy=%+.3f%@", f.t, Double(d.x), Double(d.y), r.dropped ? "  DROP" : ""))
             }
             if let g = r.fired {
                 fires.append(Fire(t: f.t, gesture: g, label: f.label, firedAtRecordTime: f.d.fired))

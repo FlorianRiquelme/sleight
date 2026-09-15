@@ -5,6 +5,20 @@ first within a section.
 
 ## Unreleased
 
+### Added
+- Grab-and-drag window placement (#5): a still fist grabs the frontmost window, the closed hand
+  moves it live, and opening the hand drops it into a snap zone on a 3×3 grid of the screen it is
+  over (quarters, halves, fill; another display if the window's center is dragged there). A drop
+  with almost no travel, or a hand that leaves the frame without opening, restores the original frame. New action type `window`; whichever static
+  gesture is mapped to it becomes the grab pose. `--window <zone|print>` snaps or prints the front
+  window from the terminal.
+
+### Changed
+- Fist is mapped to `window` by default and no longer mutes; map it to `{"type":"media","key":"mute"}`
+  to get the old behaviour.
+- `replay --csv` gains `dragx,dragy,drop` columns and `replay -v` prints `DRAG`/`DROP` lines.
+- `replay --csv` and `replay -v` include fingertip reach (`tips`) and uprightness (`up`).
+
 ### Fixed
 - First dogfooding day (4.5 h, 29 fires, 15 wrong) turned into 14 fixtures that now replay clean:
   - A hand resting at the frame edge with its fingers pointing down no longer reads as open palm
@@ -16,9 +30,6 @@ first within a section.
     handedness flip combined with a jump of 0.15 frame widths restarts the motion (real swipes
     flip with steps of 0.03–0.05). The old "flip across a 0.1 s gap" rule is replaced.
 - Known: a slow reach across the desk from an open hand still fires a swipe (1 in 4.5 h).
-
-### Changed
-- `replay --csv` and `replay -v` include fingertip reach (`tips`) and uprightness (`up`).
 
 ## 0.1.0 - 2026-09-14
 
