@@ -66,5 +66,9 @@ the result.
   committed to `recordings/`, so the bug cannot return unnoticed.
 - Remote: `origin` → github.com/FlorianRiquelme/sleight. The backlog is its issue tracker (`gh issue`);
   file follow-ups there, not in a TODO file. Commit on `feat/…` branches.
-- The external webcam has never enumerated on this machine (not in `--list`, not in the USB tree).
-  Treat "camera not found" as hardware until proven otherwise.
+- The external `HD Pro Webcam C920` enumerates as of 2026-09-15 (it did not before) and sorts
+  *first* in `--list`. The camera is resolved once at startup and falls back to `devices.first`
+  (`main.swift:56`), so a config with no `camera` key silently records on the C920 instead of the
+  built-in. Its landmarks come back sparse and intermittent during motion, which makes those
+  recordings useless as fixtures. Keep `"camera": "MacBook Pro Camera"` in the config, and read the
+  `camera:` field in a recording's header before trusting it against the built-in-camera fixtures.
